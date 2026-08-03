@@ -45,7 +45,7 @@ if (($_GET['route'] ?? 'login') === 'logout') {
 
 if (isLoggedIn()) {
     if ((currentUser()['role'] ?? '') === 'super_admin') {
-        redirectTo('dashboard');
+        redirectTo('dashboard', ['view' => 'directory']);
     }
 
     redirectTo('dashboard');
@@ -75,6 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'department_id' => $user['department_id'],
             ];
 
+            if (($user['role'] ?? '') === 'super_admin') {
+                $_SESSION['app_locale'] = 'it';
+            }
+
             $roleLabel = t('roles.' . (string) ($user['role'] ?? 'employee'));
             setFlash('success', t('auth.login_success', ['role' => $roleLabel]));
             try {
@@ -84,6 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (($user['role'] ?? '') === 'employee') {
                 redirectTo('my-space');
+            }
+            if (($user['role'] ?? '') === 'super_admin') {
+                redirectTo('dashboard', ['view' => 'directory']);
             }
             redirectTo('dashboard');
         }
