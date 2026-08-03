@@ -22,6 +22,7 @@ $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
 $settingsSimpleMode = true;
+$commercialVideos = getCommercialVideos();
 $canCreateDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
 $canCreateShifts = in_array($currentRole, ['super_admin', 'admin'], true);
 $canManageDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
@@ -729,6 +730,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
         <div class="settings-tabs" role="tablist" aria-label="<?php echo e(t('settings.management_rubrics')); ?>">
             <?php if ($currentRole === 'super_admin'): ?>
                 <button type="button" class="settings-tab" data-settings-tab="companies"><?php echo e(t('common.companies')); ?></button>
+                <button type="button" class="settings-tab" data-settings-tab="commercial-videos"><?php echo e(t('settings.commercial_videos')); ?></button>
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
             <?php if ($currentRole !== 'department_manager'): ?>
@@ -748,10 +750,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-panel-head">
                     <div>
                         <h3><?php echo e(t('common.companies')); ?></h3>
-                        <p class="crud-modal-subtitle">Create, edit and delete companies.</p>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.companies_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($scopeCompanies); ?> items</span>
+                        <span class="settings-pill"><?php echo count($scopeCompanies); ?> <?php echo e(t('settings.items')); ?></span>
                     </div>
                 </div>
 
@@ -760,12 +762,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.type')); ?>
                             <select data-field="type">
-                                <option value="hotel">Hotel</option>
-                                <option value="hospital">Hospital</option>
-                                <option value="clinic">Clinic</option>
-                                <option value="elderly_center">Elderly center</option>
-                                <option value="restaurant">Restaurant</option>
-                                <option value="other" selected>Other</option>
+                                <option value="hotel"><?php echo e(t('crud.company_type_hotel')); ?></option>
+                                <option value="hospital"><?php echo e(t('crud.company_type_hospital')); ?></option>
+                                <option value="clinic"><?php echo e(t('crud.company_type_clinic')); ?></option>
+                                <option value="elderly_center"><?php echo e(t('crud.company_type_elderly_center')); ?></option>
+                                <option value="restaurant"><?php echo e(t('crud.company_type_restaurant')); ?></option>
+                                <option value="other" selected><?php echo e(t('crud.company_type_other')); ?></option>
                             </select>
                         </label>
                         <label class="settings-field"><?php echo e(t('crud.address')); ?><input data-field="address" type="text" value=""></label>
@@ -773,9 +775,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
-                        <label class="settings-field">Logo file<input data-field="logo_file" type="file" accept="image/*"></label>
-                        <label class="settings-field">Logo path (optional)<input data-field="logo_path" type="text" value=""></label>
-                        <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('settings.logo_file')); ?><input data-field="logo_file" type="file" accept="image/*"></label>
+                        <label class="settings-field"><?php echo e(t('settings.logo_path_optional')); ?><input data-field="logo_path" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('settings.authorized_wifi_ip')); ?><input data-field="signature_ip" type="text" value=""></label>
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link settings-company-create"><?php echo e(t('crud.create')); ?></button>
                             <button type="button" class="admin-action-link admin-action-link-secondary settings-company-reset"><?php echo e(t('crud.reset')); ?></button>
@@ -791,11 +793,11 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span><?php echo e(t('crud.email')); ?></span>
                         <span><?php echo e(t('crud.phone')); ?></span>
                         <span><?php echo e(t('common.status')); ?></span>
-                        <span>Action</span>
+                        <span><?php echo e(t('settings.action_label')); ?></span>
                     </div>
 
                     <?php if (empty($scopeCompanies)): ?>
-                        <div class="crud-empty-state">No companies available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_companies_available')); ?></div>
                     <?php else: ?>
                         <?php foreach ($scopeCompanies as $company): ?>
                             <?php $companyLogoUrl = $resolveCompanyLogoUrl((string) ($company['logo_path'] ?? '')); ?>
@@ -807,17 +809,18 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <?php endif; ?>
                                         <span><?php echo e($company['name'] ?? 'Company'); ?></span>
                                     </strong>
-                                    <span><?php echo e($company['type'] ?? 'other'); ?></span>
+                                    <?php $companyTypeValue = (string) ($company['type'] ?? 'other'); ?>
+                                    <span><?php echo e(in_array($companyTypeValue, ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'], true) ? t('crud.company_type_' . $companyTypeValue) : $companyTypeValue); ?></span>
                                     <span><?php echo e($company['city'] ?? '--'); ?></span>
                                     <span><?php echo e($company['email'] ?? '--'); ?></span>
                                     <span><?php echo e($company['phone'] ?? '--'); ?></span>
-                                    <span><?php echo ((int) ($company['is_active'] ?? 1) === 1) ? 'Active' : 'Inactive'; ?></span>
+                                    <span><?php echo ((int) ($company['is_active'] ?? 1) === 1) ? e(t('crud.active')) : e(t('crud.inactive')); ?></span>
                                     <div class="settings-inline-actions">
                                         <?php if ($currentRole === 'super_admin'): ?>
                                             <button type="button"
                                                     class="admin-action-link admin-action-link-secondary settings-company-toggle"
                                                     data-company-active="<?php echo (int) ($company['is_active'] ?? 1); ?>">
-                                                <?php echo ((int) ($company['is_active'] ?? 1) === 1) ? 'Deactivate' : 'Activate'; ?>
+                                                <?php echo ((int) ($company['is_active'] ?? 1) === 1) ? e(t('settings.company_deactivate')) : e(t('settings.company_activate')); ?>
                                             </button>
                                         <?php endif; ?>
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-company-edit"><?php echo e(t('settings.edit')); ?></button>
@@ -830,12 +833,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field"><?php echo e(t('crud.type')); ?>
                                             <select data-field="type">
                                                 <?php $companyType = (string) ($company['type'] ?? 'other'); ?>
-                                                <option value="hotel" <?php echo $companyType === 'hotel' ? 'selected' : ''; ?>>Hotel</option>
-                                                <option value="hospital" <?php echo $companyType === 'hospital' ? 'selected' : ''; ?>>Hospital</option>
-                                                <option value="clinic" <?php echo $companyType === 'clinic' ? 'selected' : ''; ?>>Clinic</option>
-                                                <option value="elderly_center" <?php echo $companyType === 'elderly_center' ? 'selected' : ''; ?>>Elderly center</option>
-                                                <option value="restaurant" <?php echo $companyType === 'restaurant' ? 'selected' : ''; ?>>Restaurant</option>
-                                                <option value="other" <?php echo $companyType === 'other' ? 'selected' : ''; ?>>Other</option>
+                                                <option value="hotel" <?php echo $companyType === 'hotel' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_hotel')); ?></option>
+                                                <option value="hospital" <?php echo $companyType === 'hospital' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_hospital')); ?></option>
+                                                <option value="clinic" <?php echo $companyType === 'clinic' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_clinic')); ?></option>
+                                                <option value="elderly_center" <?php echo $companyType === 'elderly_center' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_elderly_center')); ?></option>
+                                                <option value="restaurant" <?php echo $companyType === 'restaurant' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_restaurant')); ?></option>
+                                                <option value="other" <?php echo $companyType === 'other' ? 'selected' : ''; ?>><?php echo e(t('crud.company_type_other')); ?></option>
                                             </select>
                                         </label>
                                         <label class="settings-field"><?php echo e(t('crud.address')); ?><input data-field="address" type="text" value="<?php echo e($company['address'] ?? ''); ?>"></label>
@@ -843,9 +846,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value="<?php echo e($company['zip_code'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value="<?php echo e($company['phone'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value="<?php echo e($company['email'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Logo file<input data-field="logo_file" type="file" accept="image/*"></label>
-                                        <label class="settings-field">Logo path (optional)<input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value="<?php echo e($company['signature_ip'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('settings.logo_file')); ?><input data-field="logo_file" type="file" accept="image/*"></label>
+                                        <label class="settings-field"><?php echo e(t('settings.logo_path_optional')); ?><input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('settings.authorized_wifi_ip')); ?><input data-field="signature_ip" type="text" value="<?php echo e($company['signature_ip'] ?? ''); ?>"></label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-company-save"><?php echo e(t('settings.save')); ?></button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-company-cancel"><?php echo e(t('employee.cancel')); ?></button>
@@ -857,6 +860,37 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <?php endif; ?>
                 </div>
 
+            </section>
+            <?php endif; ?>
+
+            <?php if ($currentRole === 'super_admin'): ?>
+            <section class="crud-panel settings-panel" data-settings-panel="commercial-videos" hidden>
+                <div class="settings-panel-head">
+                    <div>
+                        <h3><?php echo e(t('settings.commercial_videos')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.commercial_videos_subtitle')); ?></p>
+                    </div>
+                    <div class="settings-pill-row">
+                        <span class="settings-pill"><?php echo count($commercialVideos); ?> <?php echo e(t('settings.items')); ?></span>
+                    </div>
+                </div>
+
+                <div class="settings-list-wrap" data-commercial-videos-form>
+                    <?php foreach ($commercialVideos as $index => $video): ?>
+                        <article class="settings-list-item-wrap" data-commercial-video-row data-commercial-video-index="<?php echo (int) $index; ?>">
+                            <div class="settings-list-row settings-list-cols settings-list-cols-company-edit">
+                                <strong><?php echo e(t('settings.commercial_video_item', ['fallback' => 'Video']) . ' ' . (string) ((int) $index + 1)); ?></strong>
+                                <label class="settings-field"><?php echo e(t('settings.commercial_video_title')); ?><input data-field="title" type="text" value="<?php echo e($video['title'] ?? ''); ?>"></label>
+                                <label class="settings-field"><?php echo e(t('settings.commercial_video_url')); ?><input data-field="url" type="url" value="<?php echo e($video['url'] ?? ''); ?>"></label>
+                                <a class="admin-action-link admin-action-link-secondary" href="<?php echo e($video['url'] ?? '#'); ?>" target="_blank" rel="noopener noreferrer"><?php echo e(t('settings.commercial_video_preview')); ?></a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="settings-inline-actions" style="margin-top: 0.75rem;">
+                    <button type="button" class="admin-action-link settings-commercial-videos-save"><?php echo e(t('settings.save')); ?></button>
+                </div>
             </section>
             <?php endif; ?>
 
@@ -955,10 +989,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <option value="random"><?php echo e(t('settings.mixed_rest_days', ['fallback' => 'Mixed/random rest'])); ?></option>
                             </select>
                         </label>
-                        <label class="settings-field">Min rest days / week<input data-assignment-planner-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
-                        <label class="settings-field">Max rest days / week<input data-assignment-planner-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
-                        <label class="settings-field">Min work days / week<input data-assignment-planner-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
-                        <label class="settings-field">Max work days / week<input data-assignment-planner-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
+                        <label class="settings-field"><?php echo e(t('settings.min_rest_days_week')); ?><input data-assignment-planner-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
+                        <label class="settings-field"><?php echo e(t('settings.max_rest_days_week')); ?><input data-assignment-planner-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
+                        <label class="settings-field"><?php echo e(t('settings.min_work_days_week')); ?><input data-assignment-planner-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
+                        <label class="settings-field"><?php echo e(t('settings.max_work_days_week')); ?><input data-assignment-planner-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
 
                         <div class="settings-field settings-field-span-all">
                             <span class="settings-summary-label"><?php echo e(t('settings.select_shift_templates', ['fallback' => 'Shift templates to include'])); ?></span>
@@ -1111,7 +1145,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             }
                         ?>
                         <div class="settings-field settings-field-span-all" data-auto-assign-priority-wrap>
-                            <span><?php echo e($isFrLocale ? 'Priorite de departement pour l\'affectation automatique' : 'Department priority for auto assignment'); ?></span>
+                            <span><?php echo e(t('settings.auto_assign_department_priority')); ?></span>
                             <div class="settings-auto-assign-priority-list" data-auto-assign-priority-list>
                                 <button
                                     type="button"
@@ -1119,7 +1153,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     data-auto-assign-priority-department-id="0"
                                     aria-pressed="true"
                                 >
-                                    <?php echo e($isFrLocale ? 'Aucune priorite' : 'No priority'); ?>
+                                    <?php echo e(t('settings.auto_assign_no_priority')); ?>
                                 </button>
                                 <?php foreach ($autoAssignDepartmentOptions as $departmentOption): ?>
                                     <button
@@ -1134,7 +1168,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             </div>
                             <label class="settings-assignment-open-shift-chip settings-auto-assign-priority-guard-chip">
                                 <input type="checkbox" data-auto-assign-priority-strict checked>
-                                <?php echo e($isFrLocale ? 'Exclure les employes externes a ce departement prioritaire' : 'Exclude employees outside prioritized department'); ?>
+                                <?php echo e(t('settings.auto_assign_priority_strict')); ?>
                             </label>
                         </div>
                         <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
@@ -1149,16 +1183,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <option value="random"><?php echo e(t('settings.rest_strategy_random', ['fallback' => 'Random rotation'])); ?></option>
                             </select>
                         </label>
-                        <label class="settings-field">Min rest days / week<input data-auto-assign-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
-                        <label class="settings-field">Max rest days / week<input data-auto-assign-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
-                        <label class="settings-field">Min work days / week<input data-auto-assign-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
-                        <label class="settings-field">Max work days / week<input data-auto-assign-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
+                        <label class="settings-field"><?php echo e(t('settings.min_rest_days_week')); ?><input data-auto-assign-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
+                        <label class="settings-field"><?php echo e(t('settings.max_rest_days_week')); ?><input data-auto-assign-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
+                        <label class="settings-field"><?php echo e(t('settings.min_work_days_week')); ?><input data-auto-assign-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
+                        <label class="settings-field"><?php echo e(t('settings.max_work_days_week')); ?><input data-auto-assign-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
                         <div class="settings-field settings-field-span-all settings-auto-assign-presets" data-auto-assign-presets>
-                            <span>Policy presets</span>
+                            <span><?php echo e(t('settings.policy_presets')); ?></span>
                             <div class="settings-auto-assign-presets-list">
-                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="balanced">Balanced</button>
-                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="coverage">Max coverage</button>
-                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="wellbeing">Staff wellbeing</button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="balanced"><?php echo e(t('settings.preset_balanced')); ?></button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="coverage"><?php echo e(t('settings.preset_max_coverage')); ?></button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="wellbeing"><?php echo e(t('settings.preset_staff_wellbeing')); ?></button>
                             </div>
                         </div>
                         <div class="settings-auto-assign-forecast" data-auto-assign-forecast>
@@ -1190,17 +1224,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="settings-auto-assign-preview-modal" data-auto-assign-preview-modal hidden>
                             <div class="settings-auto-assign-preview-window">
                                 <div class="settings-auto-assign-preview-head">
-                                    <strong>Simulation avant l'affectation</strong>
-                                    <p class="crud-modal-subtitle">Verifiez l'impact prevu avant de lancer l'affectation automatique.</p>
+                                    <strong><?php echo e(t('settings.auto_assign_preview_title')); ?></strong>
+                                    <p class="crud-modal-subtitle"><?php echo e(t('settings.auto_assign_preview_subtitle')); ?></p>
                                 </div>
                                 <div class="settings-auto-assign-preview-grid" data-auto-assign-preview-grid></div>
                                 <div class="settings-auto-assign-preview-warning" style="margin-top: 0.6rem; padding: 0.7rem; background: rgba(255,193,7,0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 11px; color: #666;">
-                                    <strong style="display: block; color: #ffc107; margin-bottom: 0.3rem;">⚠ Previsione conservativa</strong>
-                                    <span>La simulazione usa stime conservative per tenere conto di vincoli settimanali, regole dipendenti e disponibilità. Alcuni slot potrebbero comunque rimanere scoperti se i dipendenti raggiungono il massimo di giorni lavorativi.</span>
+                                    <strong style="display: block; color: #ffc107; margin-bottom: 0.3rem;">⚠ <?php echo e(t('settings.auto_assign_preview_warning_title')); ?></strong>
+                                    <span><?php echo e(t('settings.auto_assign_preview_warning_body')); ?></span>
                                 </div>
                                 <div class="settings-auto-assign-preview-actions">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel>Annuler</button>
-                                    <button type="button" class="admin-action-link" data-auto-assign-preview-confirm>Lancer l'affectation automatique</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel><?php echo e(t('employee.cancel')); ?></button>
+                                    <button type="button" class="admin-action-link" data-auto-assign-preview-confirm><?php echo e(t('settings.auto_assign_preview_confirm')); ?></button>
                                 </div>
                             </div>
                         </div>
@@ -1351,21 +1385,21 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
                                 <h5><?php echo e(t('settings.availability_rules')); ?></h5>
-                                <p class="crud-modal-subtitle"><?php echo e(t('settings.weekly_rest_and_dates')); ?> — Jours par defaut, appliques a tous les mois.</p>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.weekly_rest_and_dates')); ?> — <?php echo e(t('settings.default_days_all_months')); ?></p>
                                 <div class="settings-auto-rule-weekdays" data-assignment-modal-weekdays></div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rotate-toggle>Rotation (+1 j/mois)</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rotate-toggle><?php echo e(t('settings.rotation_toggle')); ?></button>
                                 </div>
                                 <div class="settings-assignment-rotation-preview" data-assignment-modal-rotation-preview hidden></div>
-                                <p class="crud-modal-subtitle settings-month-override-label">Exception pour un mois specifique</p>
+                                <p class="crud-modal-subtitle settings-month-override-label"><?php echo e(t('settings.month_override_label')); ?></p>
                                 <div class="settings-assignment-modal-range-row settings-assignment-modal-month-row">
                                     <label class="settings-field"><?php echo e(t('settings.rules_month')); ?><input type="month" data-assignment-modal-rules-month></label>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset><?php echo e(t('settings.reset_rules')); ?></button>
                                 </div>
                                 <div class="settings-auto-rule-weekdays" data-assignment-modal-month-weekdays></div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-save-month-override>Sauvegarder ce mois</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-clear-month-override disabled>Effacer l'exception</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-save-month-override><?php echo e(t('settings.save_month_override')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-clear-month-override disabled><?php echo e(t('settings.clear_month_override')); ?></button>
                                 </div>
                                 <h5><?php echo e(t('settings.selected_month_availability')); ?></h5>
                                 <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
@@ -1677,7 +1711,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <input
                                     type="text"
                                     value="<?php echo e($scopeCompanySignatureIp); ?>"
-                                    placeholder="Example: 192.168.1.120"
+                                    placeholder="<?php echo e(t('settings.wifi_ip_placeholder')); ?>"
                                     data-company-signature-ip
                                     data-company-id="<?php echo (int) $scopeCompanyId; ?>"
                                 >
@@ -2384,6 +2418,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-list-head settings-create-row settings-create-row-shift" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
                         <div class="settings-shift-create-column settings-shift-create-column-left">
+                            <h4 class="settings-shift-block-title"><?php echo e(t('settings.shift_core_block')); ?></h4>
                             <label class="settings-field settings-field-departments"><?php echo e(t('common.department')); ?>
                                 <select data-field="department_ids" multiple size="4">
                                     <?php foreach ($visibleDepartments as $department): ?>
@@ -2411,12 +2446,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <details class="settings-shift-advanced" open>
                                 <summary><?php echo e(t('settings.shift_advanced_options')); ?></summary>
                                 <div class="settings-shift-advanced-grid">
+                                    <div class="settings-shift-advanced-block">
+                                        <h5><?php echo e(t('settings.shift_work_pattern')); ?></h5>
                                     <label class="settings-field settings-field-departments"><?php echo e(t('settings.work_weekdays_label')); ?>
                                         <select data-field="work_weekdays" multiple size="4">
                                             <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
                                                 <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <small class="settings-shift-create-hint"><?php echo e(t('settings.shift_work_weekdays_hint', ['fallback' => 'Questi giorni generano slot di lavoro.'])); ?></small>
                                     </label>
                                     <label class="settings-field settings-field-departments"><?php echo e(t('settings.months_to_cover_label')); ?>
                                         <select data-field="month_numbers" multiple size="4">
@@ -2425,6 +2463,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <?php endforeach; ?>
                                         </select>
                                     </label>
+                                    </div>
+
+                                    <div class="settings-shift-advanced-block">
+                                        <h5><?php echo e(t('settings.shift_rest_pattern')); ?></h5>
                                     <label class="settings-field settings-field-departments"><?php echo e(t('settings.weekly_rest_days_label')); ?>
                                         <select data-field="weekly_rest_weekdays" multiple size="4">
                                             <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
@@ -2445,6 +2487,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <small class="settings-shift-create-hint"><?php echo e(t('settings.rest_day_weekdays_hint')); ?></small>
                                     </label>
                                     <label class="settings-field"><?php echo e(t('settings.rest_day_repetition_label')); ?>
                                         <select data-field="restday_repeat_mode">
@@ -2458,11 +2501,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <option value="monthly"><?php echo e(t('settings.scale_month')); ?></option>
                                         </select>
                                     </label>
+                                    </div>
                                 </div>
                             </details>
                         </div>
 
                         <div class="settings-shift-create-column settings-shift-create-column-right">
+                            <h4 class="settings-shift-block-title"><?php echo e(t('settings.shift_visual_block')); ?></h4>
                             <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                                 <div class="settings-picker-stack">
                                     <div class="settings-picker-row">
@@ -2507,6 +2552,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         </div>
 
                         <div class="settings-shift-create-actions">
+                            <h4 class="settings-shift-block-title"><?php echo e(t('settings.shift_actions_block')); ?></h4>
                             <button type="button" class="admin-action-link settings-shift-create"><?php echo e(t('settings.create_shift')); ?></button>
                             <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-reset"><?php echo e(t('crud.reset')); ?></button>
                         </div>
@@ -2666,6 +2712,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                         <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
+                                                <small class="settings-shift-create-hint"><?php echo e(t('settings.rest_day_weekdays_hint')); ?></small>
                                             </label>
                                             <label class="settings-field"><?php echo e(t('settings.rest_day_repetition_label')); ?>
                                                 <select data-field="restday_repeat_mode">

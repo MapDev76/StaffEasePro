@@ -94,6 +94,10 @@
       create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); },
       update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); },
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); }
+    },
+    commercial: {
+      list(url){ return AppAPI.postJSON(url, { action: 'list' }); },
+      update(url, videos){ return AppAPI.postJSON(url, { action: 'update', videos }); }
     }
   };
   window.AppAPI = AppAPI;

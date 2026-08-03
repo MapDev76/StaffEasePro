@@ -10,3 +10,13 @@ date_default_timezone_set(appTimezoneName());
 // controller and view can safely use flash data and auth helpers from the
 // very first line.
 startAppSession();
+
+try {
+	$bootstrapPdo = getPDO();
+	ensureConnectionTrackingSchema($bootstrapPdo);
+	if (isLoggedIn()) {
+		touchCurrentUserConnection($bootstrapPdo);
+	}
+} catch (Throwable $e) {
+	// Ignore tracking failures so the application can continue serving pages.
+}

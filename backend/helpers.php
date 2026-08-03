@@ -266,6 +266,249 @@ function appNow(): DateTimeImmutable
     return new DateTimeImmutable('now', appTimezone());
 }
 
+function commercialVideosConfigPath(): string
+{
+    return __DIR__ . '/../config/commercial-videos.json';
+}
+
+function defaultCommercialVideos(): array
+{
+    return [
+        [
+            'title' => 'Demo generale della piattaforma',
+            'url' => 'https://youtu.be/LckCMzphDw0',
+        ],
+        [
+            'title' => 'Calendario, turni e presenze',
+            'url' => 'https://youtube.com/shorts/pylzptl-7Vg?feature=share',
+        ],
+        [
+            'title' => 'Documenti, messaggi e suite HotelEase Pro',
+            'url' => 'https://youtu.be/C1cWXLeGM9Y',
+        ],
+    ];
+}
+
+function commercialVideoIdFromUrl(string $url): ?string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return null;
+    }
+
+    if (preg_match('~(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/|embed/))([A-Za-z0-9_-]{6,})~i', $url, $matches)) {
+        return $matches[1];
+    }
+
+    return null;
+}
+
+function normalizeCommercialVideoEntry(mixed $entry): ?array
+{
+    if (!is_array($entry)) {
+        return null;
+    }
+
+    $title = trim((string) ($entry['title'] ?? ''));
+    $url = trim((string) ($entry['url'] ?? ''));
+    $id = commercialVideoIdFromUrl($url);
+
+    if ($id === null) {
+        return null;
+    }
+
+    return [
+        'id' => $id,
+        'title' => $title !== '' ? $title : 'Video',
+        'url' => $url,
+    ];
+}
+
+function getCommercialVideos(): array
+{
+    $path = commercialVideosConfigPath();
+    $videos = [];
+
+    if (is_file($path)) {
+        $decoded = json_decode((string) @file_get_contents($path), true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $entry) {
+                $normalized = normalizeCommercialVideoEntry($entry);
+                if ($normalized !== null) {
+                    $videos[] = $normalized;
+                }
+            }
+        }
+    }
+
+    if (empty($videos)) {
+        foreach (defaultCommercialVideos() as $entry) {
+            $normalized = normalizeCommercialVideoEntry($entry);
+            if ($normalized !== null) {
+                $videos[] = $normalized;
+            }
+        }
+    }
+
+    return array_slice($videos, 0, 3);
+}
+
+function saveCommercialVideos(array $videos): array
+{
+    $normalized = [];
+    foreach ($videos as $entry) {
+        $video = normalizeCommercialVideoEntry($entry);
+        if ($video !== null) {
+            $normalized[] = $video;
+        }
+    }
+
+    if (empty($normalized)) {
+        throw new RuntimeException('At least one valid YouTube video is required.');
+    }
+
+    $normalized = array_slice($normalized, 0, 3);
+    $path = commercialVideosConfigPath();
+    $json = json_encode($normalized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if ($json === false) {
+        throw new RuntimeException('Unable to encode video configuration.');
+    }
+
+    if (@file_put_contents($path, $json . PHP_EOL, LOCK_EX) === false) {
+        throw new RuntimeException('Unable to save video configuration.');
+    }
+
+    return $normalized;
+}
+
+function ensureConnectionTrackingSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS user_connections (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                session_id VARCHAR(128) NOT NULL,
+                ip_address VARCHAR(45) NULL,
+                user_agent VARCHAR(255) NULL,
+                logged_in_at DATETIME NOT NULL,
+                last_seen_at DATETIME NOT NULL,
+                logged_out_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_user_connections_session (session_id),
+                KEY idx_user_connections_user (user_id),
+                KEY idx_user_connections_last_seen (last_seen_at),
+                KEY idx_user_connections_logged_out (logged_out_at),
+                CONSTRAINT fk_user_connections_user
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    } catch (Throwable $e) {
+        // Keep the app running even if the current database user cannot create tables.
+    }
+
+    $initialized = true;
+}
+
+function recordUserConnectionLogin(PDO $pdo, ?array $user = null): void
+{
+    $user = $user ?? currentUser();
+    $userId = (int) ($user['id'] ?? 0);
+    if ($userId <= 0) {
+        return;
+    }
+
+    ensureConnectionTrackingSchema($pdo);
+
+    $now = appNow()->format('Y-m-d H:i:s');
+    $statement = $pdo->prepare(
+        'INSERT INTO user_connections (user_id, session_id, ip_address, user_agent, logged_in_at, last_seen_at, logged_out_at)
+         VALUES (:user_id, :session_id, :ip_address, :user_agent, :logged_in_at, :last_seen_at, NULL)
+         ON DUPLICATE KEY UPDATE
+            user_id = VALUES(user_id),
+            ip_address = VALUES(ip_address),
+            user_agent = VALUES(user_agent),
+            logged_in_at = VALUES(logged_in_at),
+            last_seen_at = VALUES(last_seen_at),
+            logged_out_at = NULL'
+    );
+    $statement->execute([
+        'user_id' => $userId,
+        'session_id' => session_id(),
+        'ip_address' => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+        'user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
+        'logged_in_at' => $now,
+        'last_seen_at' => $now,
+    ]);
+}
+
+function touchCurrentUserConnection(PDO $pdo, ?array $user = null): void
+{
+    $user = $user ?? currentUser();
+    $userId = (int) ($user['id'] ?? 0);
+    if ($userId <= 0) {
+        return;
+    }
+
+    ensureConnectionTrackingSchema($pdo);
+
+    $now = appNow()->format('Y-m-d H:i:s');
+    $statement = $pdo->prepare(
+        'INSERT INTO user_connections (user_id, session_id, ip_address, user_agent, logged_in_at, last_seen_at, logged_out_at)
+         VALUES (:user_id, :session_id, :ip_address, :user_agent, :logged_in_at, :last_seen_at, NULL)
+         ON DUPLICATE KEY UPDATE
+            user_id = VALUES(user_id),
+            ip_address = VALUES(ip_address),
+            user_agent = VALUES(user_agent),
+            last_seen_at = VALUES(last_seen_at),
+            logged_out_at = NULL'
+    );
+    $statement->execute([
+        'user_id' => $userId,
+        'session_id' => session_id(),
+        'ip_address' => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+        'user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
+        'logged_in_at' => $now,
+        'last_seen_at' => $now,
+    ]);
+}
+
+function recordCurrentUserLogout(PDO $pdo, ?array $user = null): void
+{
+    $user = $user ?? currentUser();
+    $userId = (int) ($user['id'] ?? 0);
+    if ($userId <= 0) {
+        return;
+    }
+
+    ensureConnectionTrackingSchema($pdo);
+
+    $now = appNow()->format('Y-m-d H:i:s');
+    $statement = $pdo->prepare(
+        'UPDATE user_connections
+         SET logged_out_at = :logged_out_at,
+             last_seen_at = :last_seen_at
+         WHERE session_id = :session_id
+           AND user_id = :user_id
+         ORDER BY id DESC
+         LIMIT 1'
+    );
+    $statement->execute([
+        'logged_out_at' => $now,
+        'last_seen_at' => $now,
+        'session_id' => session_id(),
+        'user_id' => $userId,
+    ]);
+}
+
 /**
  * Sends a JSON response and stops execution.
  */

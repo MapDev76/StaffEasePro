@@ -21,6 +21,15 @@ try {
 }
 
 if (($_GET['route'] ?? 'login') === 'logout') {
+    $logoutUser = currentUser();
+
+    try {
+        $logoutPdo = getPDO();
+        recordCurrentUserLogout($logoutPdo, $logoutUser);
+    } catch (Throwable $exception) {
+        // Ignore logout tracking failures.
+    }
+
     $_SESSION = [];
 
     if (ini_get('session.use_cookies')) {
@@ -35,6 +44,10 @@ if (($_GET['route'] ?? 'login') === 'logout') {
 }
 
 if (isLoggedIn()) {
+    if ((currentUser()['role'] ?? '') === 'super_admin') {
+        redirectTo('dashboard');
+    }
+
     redirectTo('dashboard');
 }
 
@@ -51,6 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password'])) {
             $loginError = t('auth.invalid_credentials');
         } else {
+            session_regenerate_id(true);
+
             $_SESSION['auth_user'] = [
                 'id' => (int) $user['id'],
                 'first_name' => $user['first_name'],
@@ -62,6 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $roleLabel = t('roles.' . (string) ($user['role'] ?? 'employee'));
             setFlash('success', t('auth.login_success', ['role' => $roleLabel]));
+            try {
+                recordUserConnectionLogin(getPDO(), $user);
+            } catch (Throwable $exception) {
+                // Ignore login tracking failures.
+            }
             if (($user['role'] ?? '') === 'employee') {
                 redirectTo('my-space');
             }

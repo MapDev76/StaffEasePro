@@ -20,24 +20,7 @@ $commercialSeoCopyByLocale = [
 	],
 ];
 $commercialSeoCopy = $commercialSeoCopyByLocale[$localeCode] ?? $commercialSeoCopyByLocale['en'];
-
-$commercialVideos = [
-    [
-        'id' => 'LckCMzphDw0',
-        'url' => 'https://youtu.be/LckCMzphDw0',
-        'title' => t('commercial.feature_1_title', ['fallback' => 'Automatizzazione dei turni di lavoro']),
-    ],
-    [
-        'id' => 'pylzptl-7Vg',
-        'url' => 'https://youtube.com/shorts/pylzptl-7Vg?feature=share',
-        'title' => t('commercial.feature_2_title', ['fallback' => 'Sicurezza delle firme digitali (Wi-Fi/IP aziendale)']),
-    ],
-    [
-        'id' => 'C1cWXLeGM9Y',
-        'url' => 'https://youtu.be/C1cWXLeGM9Y',
-        'title' => t('commercial.feature_3_title', ['fallback' => 'Centralizzazione della gestione dei dipendenti']),
-    ],
-];
+$commercialVideos = getCommercialVideos();
 ?>
 <article class="home-page commercial-page" aria-labelledby="commercial-title">
         <section class="commercial-hero">

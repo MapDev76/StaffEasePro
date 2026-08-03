@@ -89,7 +89,7 @@ $basePath = $basePath ?? (function () {
                     <?php echo e(t('crud.type')); ?>
                     <select name="type" id="crud-company-type">
                         <?php foreach (['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'] as $companyType): ?>
-                            <option value="<?php echo e($companyType); ?>"><?php echo e($companyType); ?></option>
+                            <option value="<?php echo e($companyType); ?>"><?php echo e(t('crud.company_type_' . $companyType)); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -355,21 +355,21 @@ $basePath = $basePath ?? (function () {
                 </label>
                 <label class="span-2 crud-inline-choice" for="crud-document-share-now">
                     <input type="checkbox" id="crud-document-share-now" value="1" checked>
-                    <span class="company-card-chip">Invia subito ai destinatari selezionati</span>
+                    <span class="company-card-chip"><?php echo e(t('crud.share_now')); ?></span>
                 </label>
                 <label>
-                    Tipo richiesta
+                    <?php echo e(t('crud.request_type')); ?>
                     <select id="crud-document-request-type">
-                        <option value="notification">Notifica documento</option>
+                        <option value="notification"><?php echo e(t('crud.document_notification')); ?></option>
                         <?php if ($modalCanRequestShiftCoverage): ?>
-                            <option value="shift_coverage">Richiesta sostituzione turno</option>
+                            <option value="shift_coverage"><?php echo e(t('crud.shift_coverage_request')); ?></option>
                         <?php endif; ?>
                     </select>
                 </label>
                 <label class="crud-document-shift-row is-hidden" data-document-shift-row>
-                    Turno da coprire
+                    <?php echo e(t('crud.shift_to_cover')); ?>
                     <select id="crud-document-shift-id">
-                        <option value="">Seleziona turno</option>
+                        <option value=""><?php echo e(t('crud.select_shift')); ?></option>
                         <?php foreach (($dashboardModalOpenShiftChoices ?? []) as $shiftChoice): ?>
                             <option value="<?php echo (int) ($shiftChoice['id'] ?? 0); ?>">
                                 <?php echo e((string) (($shiftChoice['department_name'] ?? '') . ' - ' . ($shiftChoice['name'] ?? 'Shift') . ' (' . substr((string) ($shiftChoice['start_time'] ?? '00:00:00'), 0, 5) . '-' . substr((string) ($shiftChoice['end_time'] ?? '00:00:00'), 0, 5) . ')')); ?>
@@ -414,19 +414,19 @@ $basePath = $basePath ?? (function () {
                 <?php if ($modalCanRequestSignature): ?>
                     <label class="span-2 crud-inline-choice" for="crud-document-require-signature">
                         <input type="checkbox" id="crud-document-require-signature" value="1">
-                        <span class="company-card-chip">Demander une signature numerique</span>
+                        <span class="company-card-chip"><?php echo e(t('crud.require_digital_signature')); ?></span>
                     </label>
                 <?php endif; ?>
                 <label class="span-2">
-                    Titolo
-                    <input type="text" id="crud-document-title" maxlength="255" placeholder="Titolo richiesta/notifica">
+                    <?php echo e(t('crud.title2')); ?>
+                    <input type="text" id="crud-document-title" maxlength="255" placeholder="<?php echo e(t('crud.document_title_placeholder')); ?>">
                 </label>
                 <label class="span-2">
                     <?php echo e(t('crud.message')); ?>
-                    <textarea id="crud-document-message" rows="3" placeholder="Messaggio breve per i destinatari"></textarea>
+                    <textarea id="crud-document-message" rows="3" placeholder="<?php echo e(t('crud.document_message_placeholder')); ?>"></textarea>
                 </label>
                 <div class="form-actions span-2">
-                    <button type="button" id="crud-document-share-existing-submit" class="admin-action-link admin-action-link-secondary">Invia documento selezionato nel messaggio</button>
+                    <button type="button" id="crud-document-share-existing-submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('crud.send_selected_document')); ?></button>
                 </div>
             </form>
         </section>
@@ -471,7 +471,7 @@ $basePath = $basePath ?? (function () {
                             <span class="company-card-chip"><?php echo e($document['document_type'] ?? t('crud.other')); ?></span>
                             <span class="company-card-chip" data-document-status-chip><?php echo e($document['status'] ?? t('crud.pending')); ?></span>
                             <?php if (!empty($document['signed_at'])): ?>
-                                <span class="company-card-chip"><?php echo e('Firmato'); ?><?php if (!empty($document['signed_page'])): ?> <?php echo e('P.' . (int) $document['signed_page']); ?><?php endif; ?></span>
+                                <span class="company-card-chip"><?php echo e(t('crud.signed')); ?><?php if (!empty($document['signed_page'])): ?> <?php echo e('P.' . (int) $document['signed_page']); ?><?php endif; ?></span>
                             <?php endif; ?>
                             <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo e($documentPreviewHref); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
@@ -485,9 +485,9 @@ $basePath = $basePath ?? (function () {
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
                                 <button type="button"
                                         class="company-card-action"
-                                        title="Aggiungi alla selezione invio"
-                                        data-document-share-select-title="Aggiungi alla selezione invio"
-                                        data-document-share-unselect-title="Rimuovi dalla selezione invio"
+                                        title="<?php echo e(t('crud.share_select_title')); ?>"
+                                        data-document-share-select-title="<?php echo e(t('crud.share_select_title')); ?>"
+                                        data-document-share-unselect-title="<?php echo e(t('crud.share_unselect_title')); ?>"
                                         data-document-share-existing-id="<?php echo (int) ($document['id'] ?? 0); ?>"
                                         data-document-share-existing-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
                                     <span aria-hidden="true" data-document-share-select-icon>+</span>

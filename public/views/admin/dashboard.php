@@ -52,10 +52,6 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
 
 <section class="admin-shell dashboard-shell" aria-label="<?php echo e(t('common.dashboard')); ?>">
     <header class="admin-hero">
-            <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
-            <h1><?php echo e($pageTitle ?? t('common.dashboard')); ?></h1>
-        <?php endif; ?>
-        <!-- No welcome message or titles for non-super users per design -->
     </header>
 
         <section class="dashboard-main" aria-label="<?php echo e(t('common.quick_actions')); ?>">
@@ -72,6 +68,10 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['departments'] ?? 0); ?></span>
                         <span class="admin-stat-label"><?php echo e(t('common.departments')); ?></span>
+                    </section>
+                    <section class="admin-card admin-stat">
+                        <span class="admin-stat-value"><?php echo e($stats['connections'] ?? 0); ?></span>
+                        <span class="admin-stat-label"><?php echo e(t('settings.active_connections', ['fallback' => 'Connessioni attive'])); ?></span>
                     </section>
                 </div>
 
@@ -99,15 +99,51 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                                 <div class="dashboard-company-metrics">
                                     <div><span><?php echo e(t('common.users')); ?></span><strong><?php echo e($company['users_count'] ?? 0); ?></strong></div>
                                     <div><span><?php echo e(t('common.departments')); ?></span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
+                                    <div><span><?php echo e(t('settings.active_connections', ['fallback' => 'Connessioni attive'])); ?></span><strong><?php echo e($company['active_connections'] ?? 0); ?></strong></div>
                                     <div><span><?php echo e(t('common.signature_ip')); ?></span><strong><?php echo e($company['signature_ip'] ?: '-'); ?></strong></div>
                                 </div>
 
                                 <p><strong><?php echo e(t('common.admins')); ?>:</strong> <?php echo e(empty($company['admins']) ? t('common.none') : implode(', ', $company['admins'])); ?></p>
                                 <p><strong><?php echo e(t('common.department_heads')); ?>:</strong> <?php echo e(empty($company['heads']) ? t('common.none') : implode(', ', $company['heads'])); ?></p>
                                 <p><strong><?php echo e(t('common.departments')); ?>:</strong> <?php echo e(empty($company['departments']) ? t('common.none') : implode(', ', $company['departments'])); ?></p>
+                                <p><strong><?php echo e(t('settings.connected_users', ['fallback' => 'Utenti connessi'])); ?>:</strong> <?php echo e(empty($company['connected_users']) ? t('common.none') : implode(', ', $company['connected_users'])); ?></p>
+                                <p><strong><?php echo e(t('settings.last_connection', ['fallback' => 'Ultima connessione'])); ?>:</strong> <?php echo e(!empty($company['last_connection_at']) ? date('d/m/Y H:i', strtotime((string) $company['last_connection_at'])) : '-'); ?></p>
                             </article>
                             </a>
                         <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <section class="admin-card">
+                    <h2><?php echo e(t('settings.recent_connections', ['fallback' => 'Connessioni recenti'])); ?></h2>
+                    <div class="table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th><?php echo e(t('settings.user_label', ['fallback' => 'Utente'])); ?></th>
+                                    <th><?php echo e(t('common.company', ['fallback' => 'Company'])); ?></th>
+                                    <th><?php echo e(t('common.department')); ?></th>
+                                    <th><?php echo e(t('common.date', ['fallback' => 'Date'])); ?></th>
+                                    <th><?php echo e(t('common.status')); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($moduleRows['recent_connections'] ?? [])): ?>
+                                    <tr>
+                                        <td colspan="5"><?php echo e(t('common.none')); ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php foreach (($moduleRows['recent_connections'] ?? []) as $connection): ?>
+                                    <tr>
+                                        <td><?php echo e($connection['user_name'] ?? '-'); ?></td>
+                                        <td><?php echo e($connection['company_name'] ?? '-'); ?></td>
+                                        <td><?php echo e($connection['department_name'] ?? '-'); ?></td>
+                                        <td><?php echo e(!empty($connection['last_seen_at']) ? date('d/m/Y H:i', strtotime((string) $connection['last_seen_at'])) : '-'); ?></td>
+                                        <td><?php echo e(!empty($connection['logged_out_at']) ? t('common.done') : t('settings.active', ['fallback' => 'Active'])); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager' || $isSuperAdminCompanyDashboard): ?>
@@ -116,7 +152,6 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                         <div class="dashboard-company-card-head">
                             <div>
                                 <h3><?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : t('common.company', ['fallback' => 'Company'])); ?></h3>
-                                <p><?php echo e(t('common.dashboard')); ?></p>
                             </div>
                             <?php if ($plannerCompanyLogoUrl !== ''): ?>
                                 <img src="<?php echo e($plannerCompanyLogoUrl); ?>" alt="<?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : 'Company'); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">

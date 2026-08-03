@@ -262,6 +262,9 @@ $uiHintsVersion = (string) (@filemtime($uiHintsFile) ?: time());
 
 $employeeSpaceFile = __DIR__ . '/assets/js/employee-space.js';
 $employeeSpaceVersion = (string) (@filemtime($employeeSpaceFile) ?: time());
+
+$commercialVideosFile = __DIR__ . '/assets/js/dashboard/commercial-videos.js';
+$commercialVideosVersion = (string) (@filemtime($commercialVideosFile) ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo e($locale); ?>">
@@ -403,6 +406,7 @@ require $viewFile;
                 apiDepartments: '<?php echo appUrl('api-departments'); ?>',
                 apiUsers: '<?php echo appUrl('api-users'); ?>',
                 apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
+                apiCommercial: '<?php echo appUrl('api-commercial'); ?>',
                 apiShifts: '<?php echo appUrl('api-shifts'); ?>',
                 iconsBase: '<?php echo $basePath; ?>/assets/icons/',
                 pdfjsLibSrc: '<?php echo $basePath; ?>/assets/js/vendor/pdfjs/pdf.min.js?v=<?php echo filemtime(__DIR__ . '/assets/js/vendor/pdfjs/pdf.min.js'); ?>',
@@ -426,6 +430,7 @@ require $viewFile;
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/commercial-videos.js?v=<?php echo e($commercialVideosVersion); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
 <?php endif; ?>

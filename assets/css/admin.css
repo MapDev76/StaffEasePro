@@ -2089,7 +2089,7 @@ body.route-my-space {
 }
 
 .settings-list-cols-user {
-    grid-template-columns: minmax(140px, 1.2fr) minmax(180px, 1.5fr) minmax(110px, 0.9fr) minmax(130px, 1fr) minmax(80px, 0.7fr) minmax(150px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .settings-list-cols-user-create,
@@ -2098,12 +2098,12 @@ body.route-my-space {
 }
 
 .settings-list-cols-dept {
-    grid-template-columns: minmax(180px, 1.3fr) minmax(160px, 1.1fr) minmax(170px, 1.2fr) minmax(80px, 0.5fr) minmax(80px, 0.5fr) minmax(170px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .settings-list-cols-dept-edit,
 .settings-list-cols-dept-create {
-    grid-template-columns: repeat(4, minmax(160px, 1fr)) minmax(220px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .settings-dept-title {
@@ -2125,7 +2125,7 @@ body.route-my-space {
 }
 
 .settings-list-cols-shift {
-    grid-template-columns: minmax(140px, 1.1fr) minmax(130px, 1fr) minmax(180px, 1.35fr) minmax(130px, 0.9fr) minmax(70px, 0.45fr) minmax(100px, 0.65fr) minmax(130px, 0.8fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .settings-list-cols-shift-create,
@@ -2134,7 +2134,7 @@ body.route-my-space {
 }
 
 .settings-list-cols-shift-edit {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .settings-list-cols-shift-edit .settings-field {
@@ -2156,19 +2156,19 @@ body.route-my-space {
 }
 
 .settings-list-cols-assignment {
-    grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(220px, 1.4fr) minmax(160px, 1fr) minmax(170px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .settings-list-cols-assignment-edit {
-    grid-template-columns: repeat(4, minmax(160px, 1fr)) minmax(170px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .settings-list-cols-company {
-    grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 0.8fr) minmax(120px, 0.85fr) minmax(180px, 1.2fr) minmax(140px, 0.9fr) minmax(150px, 0.8fr);
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .settings-list-cols-company-edit {
-    grid-template-columns: repeat(3, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .settings-auto-assign-row {
@@ -2313,8 +2313,26 @@ body.route-my-space {
 .settings-shift-create-column {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.65rem;
-    align-items: end;
+    gap: 0.55rem;
+    align-items: start;
+    align-content: start;
+}
+.settings-shift-block-title {
+    margin: 0 0 0.06rem;
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-extra-bold);
+    color: #6d5108;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    grid-column: 1 / -1;
+}
+
+.settings-shift-create-column .settings-shift-advanced {
+    grid-column: 1 / -1;
+}
+
+.settings-shift-create-column-right .settings-field:has([data-field="description"]) {
+    grid-column: 1 / -1;
 }
 
 .settings-shift-create-column .settings-field {
@@ -2474,7 +2492,7 @@ body.route-my-space {
     width: 100%;
     max-width: 124px;
     min-height: 30px;
-    padding: 0.32rem 0.52rem;
+    padding: 0.3rem 0.5rem;
     font-size: 0.78rem;
     justify-self: start;
 }
@@ -2491,7 +2509,7 @@ body.route-my-space {
     border: 1px solid rgba(157, 121, 16, 0.3);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.58);
-    padding: 0.5rem 0.6rem;
+    padding: 0.45rem 0.55rem;
 }
 
 .settings-shift-advanced > summary {
@@ -2507,15 +2525,29 @@ body.route-my-space {
 }
 
 .settings-shift-advanced-grid {
-    margin-top: 0.55rem;
+    margin-top: 0.45rem;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.45rem;
     align-items: start;
 }
 
-.settings-shift-advanced-grid .settings-field-departments {
-    grid-column: 1 / -1;
+.settings-shift-advanced-block {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.45rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 121, 16, 0.18);
+    background: rgba(255, 255, 255, 0.48);
+}
+
+.settings-shift-advanced-block h5 {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: var(--font-weight-extra-bold);
+    color: #6d5108;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 @media (min-width: 1101px) {
@@ -2599,7 +2631,7 @@ body.route-my-space {
     border: 1px solid rgba(157, 121, 16, 0.2);
     border-radius: 14px;
     background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
-}
+    padding: 0.45rem 0.55rem;
 
 .settings-create-row.settings-auto-assign-row {
     border: 1px solid rgba(157, 121, 16, 0.42);
@@ -2651,10 +2683,26 @@ body.route-my-space {
     gap: 0.4rem;
     margin-top: 0.2rem;
 }
-
-.settings-edit-drawer .settings-inline-actions .admin-action-link {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.45rem;
     min-width: 106px;
     padding: 0.42rem 0.58rem;
+.settings-shift-advanced-block {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 121, 16, 0.18);
+    background: rgba(255, 255, 255, 0.48);
+}
+.settings-shift-advanced-block h5 {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: var(--font-weight-extra-bold);
+    color: #6d5108;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
     font-size: 0.78rem;
 }
 
@@ -2889,29 +2937,30 @@ body.route-my-space {
 /* Settings panel layout redistribution for better space usage */
 .dashboard-settings-modal .settings-list-cols-user-create,
 .dashboard-settings-modal .settings-list-cols-user-edit {
-    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .dashboard-settings-modal .settings-list-cols-dept,
 .dashboard-settings-modal .settings-list-cols-company {
-    grid-template-columns: repeat(6, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .dashboard-settings-modal .settings-list-cols-dept-create,
 .dashboard-settings-modal .settings-list-cols-dept-edit,
 .dashboard-settings-modal .settings-list-cols-company-edit {
-    grid-template-columns: repeat(5, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .dashboard-settings-modal .settings-list-cols-shift-create {
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.1fr) minmax(190px, 0.72fr);
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     align-items: start;
     gap: 0.65rem;
 }
 
 .dashboard-settings-modal .settings-shift-create-column {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     align-items: start;
+    align-content: start;
 }
 
 .dashboard-settings-modal .settings-shift-create-column .settings-field-departments,

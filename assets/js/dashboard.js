@@ -16,7 +16,7 @@
   const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   const isFr = locale.startsWith('fr');
   const isIt = locale.startsWith('it');
-  const tr = (enText, frText) => (isFr ? frText : enText);
+  const tr = (enText, frText, itText) => (isFr ? frText : (isIt && itText ? itText : enText));
   const apiCompanies = config.apiCompanies;
   const apiDepartments = config.apiDepartments;
   const apiUsers = config.apiUsers;
@@ -84,7 +84,7 @@
           configurePdfWorker();
           resolve(pdfjsLibGlobal);
         }, { once: true });
-        existing.addEventListener('error', () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.'))), { once: true });
+        existing.addEventListener('error', () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.', 'Impossibile caricare il motore PDF.'))), { once: true });
         return;
       }
 
@@ -97,7 +97,7 @@
         configurePdfWorker();
         resolve(pdfjsLibGlobal);
       };
-      script.onerror = () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.')));
+      script.onerror = () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.', 'Impossibile caricare il motore PDF.')));
       document.head.appendChild(script);
     });
 
@@ -247,7 +247,7 @@
         const openDashboardSignModal = (button) => {
           const documentId = Number(button.getAttribute('data-dashboard-document-sign-id') || 0);
           if (!documentId) {
-            notifyError(tr('Invalid document id.', 'ID document invalide.'));
+            notifyError(tr('Invalid document id.', 'ID document invalide.', 'ID documento non valido.'));
             return;
           }
 
@@ -270,45 +270,45 @@
             <div class="employee-attendance-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-document-sign-title">
               <div class="employee-attendance-dialog-head">
                 <div>
-                  <span class="employee-stage-eyebrow">${tr('Documents', 'Documents')}</span>
-                  <h3 id="dashboard-document-sign-title">${tr('Sign document', 'Signer le document')}</h3>
+                  <span class="employee-stage-eyebrow">${tr('Documents', 'Documents', 'Documenti')}</span>
+                  <h3 id="dashboard-document-sign-title">${tr('Sign document', 'Signer le document', 'Firma documento')}</h3>
                   <p class="crud-modal-subtitle">${documentName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 </div>
-                <button type="button" class="dashboard-modal-close" data-dashboard-document-sign-close aria-label="${tr('Close', 'Fermer')}">×</button>
+                <button type="button" class="dashboard-modal-close" data-dashboard-document-sign-close aria-label="${tr('Close', 'Fermer', 'Chiudi')}">×</button>
               </div>
 
               <div class="admin-form employee-sign-form" data-dashboard-document-sign-form>
                 <div class="employee-document-sign-stage">
-                  <p class="crud-modal-subtitle employee-document-sign-stage-hint">${tr('Choose where to sign: click or drag the marker inside the document preview.', 'Choisissez où signer : cliquez ou faites glisser le marqueur dans l apercu du document.')}</p>
+                  <p class="crud-modal-subtitle employee-document-sign-stage-hint">${tr('Choose where to sign: click or drag the marker inside the document preview.', 'Choisissez où signer : cliquez ou faites glisser le marqueur dans l apercu du document.', 'Scegli dove firmare: clicca o trascina il marcatore nell\'anteprima del documento.')}</p>
                   <div class="employee-signature-pad-actions" data-dashboard-document-sign-page-controls>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-prev>${tr('Previous page', 'Page precedente')}</button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-prev>${tr('Previous page', 'Page precedente', 'Pagina precedente')}</button>
                     <label style="display:flex;align-items:center;gap:.35rem;">
-                      <span>${tr('Page', 'Page')}</span>
+                      <span>${tr('Page', 'Page', 'Pagina')}</span>
                       <input type="number" min="1" step="1" value="1" data-dashboard-document-sign-page-input style="max-width:88px;">
                     </label>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-next>${tr('Next page', 'Page suivante')}</button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-next>${tr('Next page', 'Page suivante', 'Pagina successiva')}</button>
                   </div>
                   <div class="employee-document-sign-preview-wrap">
                     <iframe src="${previewUrl}" class="employee-document-sign-preview" data-dashboard-document-sign-preview-frame title="Preview"></iframe>
-                    <canvas class="employee-document-sign-pdf-canvas" data-dashboard-document-sign-pdf-canvas hidden aria-label="${tr('PDF page preview', 'Apercu de la page PDF')}"></canvas>
-                    <button type="button" class="employee-document-sign-position-layer" data-dashboard-document-sign-position-layer aria-label="${tr('Choose signature position', 'Choisissez la position de la signature')}">
+                    <canvas class="employee-document-sign-pdf-canvas" data-dashboard-document-sign-pdf-canvas hidden aria-label="${tr('PDF page preview', 'Apercu de la page PDF', 'Anteprima della pagina PDF')}"></canvas>
+                    <button type="button" class="employee-document-sign-position-layer" data-dashboard-document-sign-position-layer aria-label="${tr('Choose signature position', 'Choisissez la position de la signature', 'Scegli la posizione della firma')}">
                       <span class="employee-document-sign-position-dot" data-dashboard-document-sign-position-dot aria-hidden="true"></span>
                     </button>
                   </div>
                 </div>
 
                 <div class="employee-signature-pad-shell">
-                  <canvas width="520" height="180" data-dashboard-document-sign-canvas aria-label="${tr('Digital signature', 'Signature numerique')}"></canvas>
+                  <canvas width="520" height="180" data-dashboard-document-sign-canvas aria-label="${tr('Digital signature', 'Signature numerique', 'Firma digitale')}"></canvas>
                   <small class="employee-signature-error" data-dashboard-document-sign-error></small>
                   <div class="employee-signature-pad-actions">
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-clear>${tr('Clear signature', 'Effacer la signature')}</button>
-                    <small>${tr('Sign with your finger on mobile or with mouse/stylus on desktop.', 'Signez avec le doigt sur mobile ou avec la souris/le stylet sur desktop.')}</small>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-clear>${tr('Clear signature', 'Effacer la signature', 'Cancella firma')}</button>
+                    <small>${tr('Sign with your finger on mobile or with mouse/stylus on desktop.', 'Signez avec le doigt sur mobile ou avec la souris/le stylet sur desktop.', 'Firma con il dito su mobile o con il mouse/pennino su desktop.')}</small>
                   </div>
                 </div>
 
                 <div class="employee-attendance-dialog-actions">
-                  <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-close>${tr('Cancel', 'Annuler')}</button>
-                  <button type="button" class="admin-action-link" data-dashboard-document-sign-submit>${tr('Sign document', 'Signer le document')}</button>
+                  <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-close>${tr('Cancel', 'Annuler', 'Annulla')}</button>
+                  <button type="button" class="admin-action-link" data-dashboard-document-sign-submit>${tr('Sign document', 'Signer le document', 'Firma documento')}</button>
                 </div>
               </div>
             </div>
@@ -352,7 +352,7 @@
           const pageInput = signModal.querySelector('[data-dashboard-document-sign-page-input]');
 
           if (!canvas || !positionLayer || !positionDot || !submitButton || !previewFrame) {
-            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.'));
+            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.', 'Impossibile aprire l\'editor di firma.'));
             closeModal();
             return;
           }
@@ -365,7 +365,7 @@
           });
 
           if (!pad) {
-            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.'));
+            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.', 'Impossibile aprire l\'editor di firma.'));
             closeModal();
             return;
           }
@@ -442,7 +442,7 @@
             } catch (error) {
               pdfDocument = null;
               if (errorNode) {
-                errorNode.textContent = tr('PDF advanced preview unavailable, using browser preview fallback.', 'Apercu PDF avance indisponible, utilisation du mode de secours navigateur.');
+                errorNode.textContent = tr('PDF advanced preview unavailable, using browser preview fallback.', 'Apercu PDF avance indisponible, utilisation du mode de secours navigateur.', 'Anteprima PDF avanzata non disponibile, utilizzo dell\'anteprima del browser.');
               }
               previewFrame.hidden = false;
               previewFrame.src = fallbackPreviewUrl;
@@ -504,13 +504,13 @@
             event.preventDefault();
             if (!pad.hasStroke()) {
               if (errorNode) {
-                errorNode.textContent = tr('Please draw your signature before signing this document.', 'Veuillez dessiner votre signature avant de signer ce document.');
+                errorNode.textContent = tr('Please draw your signature before signing this document.', 'Veuillez dessiner votre signature avant de signer ce document.', 'Disegna la tua firma prima di firmare questo documento.');
               }
               return;
             }
 
             if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API dashboard non disponibile.'));
               return;
             }
 
@@ -527,15 +527,15 @@
               });
 
               if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to sign document.', 'Impossible de signer le document.'));
+                throw new Error((response && (response.error || response.message)) || tr('Unable to sign document.', 'Impossible de signer le document.', 'Impossibile firmare il documento.'));
               }
 
-              notifySuccess(tr('Document signed successfully.', 'Document signe avec succes.'));
+              notifySuccess(tr('Document signed successfully.', 'Document signe avec succes.', 'Documento firmato con successo.'));
               closeModal();
               window.location.reload();
             } catch (err) {
               if (errorNode) {
-                errorNode.textContent = (err && err.message) || tr('Unable to sign document.', 'Impossible de signer le document.');
+                errorNode.textContent = (err && err.message) || tr('Unable to sign document.', 'Impossible de signer le document.', 'Impossibile firmare il documento.');
               }
             } finally {
               submitButton.disabled = false;
@@ -588,8 +588,8 @@
           }
           if (uploadSubmitButton) {
             uploadSubmitButton.textContent = shareNow
-              ? tr('Upload and share document', 'Televerser et partager le document')
-              : tr('Save document draft', 'Enregistrer le brouillon du document');
+              ? tr('Upload and share document', 'Televerser et partager le document', 'Carica e condividi documento')
+              : tr('Save document draft', 'Enregistrer le brouillon du document', 'Salva bozza documento');
           }
           syncDocumentRequestMode();
         };
@@ -609,7 +609,7 @@
             const commaIdx = result.indexOf(',');
             resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
           };
-          reader.onerror = () => reject(new Error(tr('Unable to read file.', 'Impossible de lire le fichier.')));
+          reader.onerror = () => reject(new Error(tr('Unable to read file.', 'Impossible de lire le fichier.', 'Impossibile leggere il file.')));
           reader.readAsDataURL(file);
         });
 
@@ -631,13 +631,13 @@
             event.preventDefault();
 
             if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API dashboard non disponibile.'));
               return;
             }
 
             const file = uploadFileInput.files && uploadFileInput.files[0] ? uploadFileInput.files[0] : null;
             if (!file) {
-              notifyError(tr('Please choose a document to upload.', 'Veuillez choisir un document a televerser.'));
+              notifyError(tr('Please choose a document to upload.', 'Veuillez choisir un document a televerser.', 'Scegli un documento da caricare.'));
               return;
             }
 
@@ -649,11 +649,11 @@
             const requestMessage = String(uploadMessageInput ? uploadMessageInput.value || '' : '').trim();
 
             if (shareNow && recipientScope !== 'all' && recipientIds.length === 0) {
-              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.', 'Seleziona almeno un destinatario.'));
               return;
             }
             if (shareNow && requestType === 'shift_coverage' && shiftId <= 0) {
-              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.'));
+              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.', 'Seleziona un turno per la richiesta di copertura.'));
               return;
             }
 
@@ -677,15 +677,15 @@
               });
 
               if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to share document.', 'Impossible de partager le document.'));
+                throw new Error((response && (response.error || response.message)) || tr('Unable to share document.', 'Impossible de partager le document.', 'Impossibile condividere il documento.'));
               }
 
               notifySuccess(shareNow
-                ? tr('Document uploaded and shared successfully.', 'Document televerse et partage avec succes.')
-                : tr('Document draft uploaded successfully. Sign or archive it before sharing.', 'Brouillon televerse avec succes. Signez-le ou archivez-le avant partage.'));
+                ? tr('Document uploaded and shared successfully.', 'Document televerse et partage avec succes.', 'Documento caricato e condiviso con successo.')
+                : tr('Document draft uploaded successfully. Sign or archive it before sharing.', 'Brouillon televerse avec succes. Signez-le ou archivez-le avant partage.', 'Bozza del documento caricata con successo. Firmala o archiviala prima della condivisione.'));
               window.location.reload();
             } catch (error) {
-              notifyError((error && error.message) || tr('Unable to upload document.', 'Impossible de televerser le document.'));
+              notifyError((error && error.message) || tr('Unable to upload document.', 'Impossible de televerser le document.', 'Impossibile caricare il documento.'));
             } finally {
               uploadSubmitButton && (uploadSubmitButton.disabled = false);
             }
@@ -696,14 +696,14 @@
           uploadShareExistingButton.addEventListener('click', async (event) => {
             event.preventDefault();
             if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API dashboard non disponibile.'));
               return;
             }
 
             const selectedButton = crudBody.querySelector('[data-document-share-existing-id].is-active');
             const documentId = Number(selectedButton ? (selectedButton.getAttribute('data-document-share-existing-id') || 0) : 0);
             if (!documentId) {
-              notifyError(tr('Select a document card to share first.', 'Selectionnez d abord une carte document a partager.'));
+              notifyError(tr('Select a document card to share first.', 'Selectionnez d abord une carte document a partager.', 'Seleziona prima una scheda documento da condividere.'));
               return;
             }
 
@@ -713,11 +713,11 @@
             const requestTitle = String(uploadTitleInput ? uploadTitleInput.value || '' : '').trim();
             const requestMessage = String(uploadMessageInput ? uploadMessageInput.value || '' : '').trim();
             if (recipientScope !== 'all' && recipientIds.length === 0) {
-              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.', 'Seleziona almeno un destinatario.'));
               return;
             }
             if (requestType === 'shift_coverage' && shiftId <= 0) {
-              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.'));
+              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.', 'Seleziona un turno per la richiesta di copertura.'));
               return;
             }
 
@@ -736,13 +736,13 @@
               });
 
               if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.'));
+                throw new Error((response && (response.error || response.message)) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.', 'Impossibile condividere il documento selezionato.'));
               }
 
-              notifySuccess(tr('Selected document shared successfully.', 'Document selectionne partage avec succes.'));
+              notifySuccess(tr('Selected document shared successfully.', 'Document selectionne partage avec succes.', 'Documento selezionato condiviso con successo.'));
               window.location.reload();
             } catch (error) {
-              notifyError((error && error.message) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.'));
+              notifyError((error && error.message) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.', 'Impossibile condividere il documento selezionato.'));
             } finally {
               uploadShareExistingButton.disabled = false;
             }
@@ -755,7 +755,7 @@
             const isAlreadyActive = button.classList.contains('is-active');
             crudBody.querySelectorAll('[data-document-share-existing-id]').forEach((item) => {
               item.classList.remove('is-active');
-              const defaultTitle = String(item.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi'));
+              const defaultTitle = String(item.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi', 'Aggiungi alla selezione di invio'));
               item.title = defaultTitle;
               const iconNode = item.querySelector('[data-document-share-select-icon]');
               if (iconNode) {
@@ -765,15 +765,15 @@
             if (!isAlreadyActive) {
               button.classList.add('is-active');
               const documentName = String(button.getAttribute('data-document-share-existing-name') || 'document');
-              button.title = String(button.getAttribute('data-document-share-unselect-title') || tr('Remove from send selection', 'Retirer de la selection d envoi'));
+              button.title = String(button.getAttribute('data-document-share-unselect-title') || tr('Remove from send selection', 'Retirer de la selection d envoi', 'Rimuovi dalla selezione di invio'));
               const iconNode = button.querySelector('[data-document-share-select-icon]');
               if (iconNode) {
                 iconNode.textContent = '✓';
               }
-              notifySuccess(tr(`Added to send selection: ${documentName}`, `Ajoute a la selection d envoi : ${documentName}`));
+              notifySuccess(tr(`Added to send selection: ${documentName}`, `Ajoute a la selection d envoi : ${documentName}`, `Aggiunto alla selezione di invio: ${documentName}`));
             } else {
-              button.title = String(button.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi'));
-              notifySuccess(tr('Removed from send selection.', 'Retire de la selection d envoi.'));
+              button.title = String(button.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi', 'Aggiungi alla selezione di invio'));
+              notifySuccess(tr('Removed from send selection.', 'Retire de la selection d envoi.', 'Rimosso dalla selezione di invio.'));
             }
           });
         });
@@ -781,18 +781,18 @@
         crudBody.querySelectorAll('[data-document-delete-id]').forEach((button) => {
           button.addEventListener('click', async () => {
             if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API dashboard non disponibile.'));
               return;
             }
 
             const documentId = Number(button.getAttribute('data-document-delete-id') || 0);
             const documentName = String(button.getAttribute('data-document-delete-name') || 'document');
             if (!documentId) {
-              notifyError(tr('Invalid document id.', 'ID document invalide.'));
+              notifyError(tr('Invalid document id.', 'ID document invalide.', 'ID documento non valido.'));
               return;
             }
 
-            if (!window.confirm(tr('Delete document "' + documentName + '"? This action cannot be undone.', 'Supprimer le document "' + documentName + '" ? Cette action est irreversible.'))) {
+            if (!window.confirm(tr('Delete document "' + documentName + '"? This action cannot be undone.', 'Supprimer le document "' + documentName + '" ? Cette action est irreversible.', 'Eliminare il documento "' + documentName + '"? Questa azione non può essere annullata.'))) {
               return;
             }
 
@@ -803,12 +803,12 @@
                 document_id: documentId,
               });
               if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to delete document.', 'Impossible de supprimer le document.'));
+                throw new Error((response && (response.error || response.message)) || tr('Unable to delete document.', 'Impossible de supprimer le document.', 'Impossibile eliminare il documento.'));
               }
               removeDocumentCard(button.closest('.company-card'));
-              notifySuccess(tr('Document deleted successfully.', 'Document supprime avec succes.'));
+              notifySuccess(tr('Document deleted successfully.', 'Document supprime avec succes.', 'Documento eliminato con successo.'));
             } catch (error) {
-              notifyError((error && error.message) || tr('Unable to delete document.', 'Impossible de supprimer le document.'));
+              notifyError((error && error.message) || tr('Unable to delete document.', 'Impossible de supprimer le document.', 'Impossibile eliminare il documento.'));
             } finally {
               button.disabled = false;
             }
@@ -833,20 +833,20 @@
         const companyForm = crudBody.querySelector('#crud-company-form');
 
         const resetCompanyForm = () => {
-          if (companyHeading) companyHeading.textContent = tr('Create company', 'Creer une entreprise');
+          if (companyHeading) companyHeading.textContent = tr('Create company', 'Creer une entreprise', 'Crea azienda');
           if (companyAction) companyAction.value = 'create';
           if (companyId) companyId.value = '';
-          if (companySubmit) companySubmit.textContent = tr('Create company', 'Creer une entreprise');
+          if (companySubmit) companySubmit.textContent = tr('Create company', 'Creer une entreprise', 'Crea azienda');
           if (companyForm) companyForm.reset();
         };
 
         const fillCompanyForm = (card) => {
           if (!card) return;
           const data = card.dataset || {};
-          if (companyHeading) companyHeading.textContent = tr('Edit company', 'Modifier l entreprise');
+          if (companyHeading) companyHeading.textContent = tr('Edit company', 'Modifier l entreprise', 'Modifica azienda');
           if (companyAction) companyAction.value = 'update';
           if (companyId) companyId.value = data.companyId || '';
-          if (companySubmit) companySubmit.textContent = tr('Update company', 'Mettre a jour l entreprise');
+          if (companySubmit) companySubmit.textContent = tr('Update company', 'Mettre a jour l entreprise', 'Aggiorna azienda');
           const fields = {
             'crud-company-name': data.companyName || '',
             'crud-company-type': data.companyType || 'other',
@@ -883,10 +883,10 @@
         const resetUser = crudBody.querySelector('[data-crud-reset-user]');
 
         const resetUserForm = () => {
-          if (userHeading) userHeading.textContent = tr('Create user', 'Creer un utilisateur');
+          if (userHeading) userHeading.textContent = tr('Create user', 'Creer un utilisateur', 'Crea utente');
           if (userAction) userAction.value = 'create';
           if (userId) userId.value = '';
-          if (userSubmit) userSubmit.textContent = tr('Create user', 'Creer un utilisateur');
+          if (userSubmit) userSubmit.textContent = tr('Create user', 'Creer un utilisateur', 'Crea utente');
           if (userForm) userForm.reset();
           syncDepartmentFilter(userDepartment, '');
         };
@@ -903,10 +903,10 @@
         const fillUserForm = (card) => {
           if (!card) return;
           const data = card.dataset || [];
-          if (userHeading) userHeading.textContent = tr('Edit user', 'Modifier l utilisateur');
+          if (userHeading) userHeading.textContent = tr('Edit user', 'Modifier l utilisateur', 'Modifica utente');
           if (userAction) userAction.value = 'update';
           if (userId) userId.value = data.userId || '';
-          if (userSubmit) userSubmit.textContent = tr('Update user', 'Mettre a jour l utilisateur');
+          if (userSubmit) userSubmit.textContent = tr('Update user', 'Mettre a jour l utilisateur', 'Aggiorna utente');
           const fields = {
             'crud-user-first-name': data.userFirstName || '',
             'crud-user-last-name': data.userLastName || '',
@@ -963,10 +963,10 @@
         };
 
         const resetDepartmentForm = () => {
-          if (departmentHeading) departmentHeading.textContent = tr('Create department', 'Creer un departement');
+          if (departmentHeading) departmentHeading.textContent = tr('Create department', 'Creer un departement', 'Crea dipartimento');
           if (departmentAction) departmentAction.value = 'create';
           if (departmentId) departmentId.value = '';
-          if (departmentSubmit) departmentSubmit.textContent = tr('Create department', 'Creer un departement');
+          if (departmentSubmit) departmentSubmit.textContent = tr('Create department', 'Creer un departement', 'Crea dipartimento');
           if (departmentForm) departmentForm.reset();
           filterDepartmentHeads('');
         };
@@ -974,10 +974,10 @@
         const fillDepartmentForm = (card) => {
           if (!card) return;
           const data = card.dataset || {};
-          if (departmentHeading) departmentHeading.textContent = tr('Edit department', 'Modifier le departement');
+          if (departmentHeading) departmentHeading.textContent = tr('Edit department', 'Modifier le departement', 'Modifica dipartimento');
           if (departmentAction) departmentAction.value = 'update';
           if (departmentId) departmentId.value = data.departmentId || '';
-          if (departmentSubmit) departmentSubmit.textContent = tr('Update department', 'Mettre a jour le departement');
+          if (departmentSubmit) departmentSubmit.textContent = tr('Update department', 'Mettre a jour le departement', 'Aggiorna dipartimento');
           if (departmentCompany) departmentCompany.value = data.departmentCompanyId || '';
           filterDepartmentHeads(data.departmentCompanyId || '');
           const fields = {
@@ -1044,14 +1044,14 @@
           if (crudTitle) crudTitle.textContent = title;
           if (crudSubtitle) {
             crudSubtitle.textContent = entity === 'companies'
-              ? tr('Create, edit and manage companies and departments.', 'Creez, modifiez et gerez entreprises et departements.')
+              ? tr('Create, edit and manage companies and departments.', 'Creez, modifiez et gerez entreprises et departements.', 'Crea, modifica e gestisci aziende e dipartimenti.')
               : entity === 'users'
-                ? tr('Create, edit and assign users by role and department.', 'Creez, modifiez et assignez les utilisateurs par role et departement.')
+                ? tr('Create, edit and assign users by role and department.', 'Creez, modifiez et assignez les utilisateurs par role et departement.', 'Crea, modifica e assegna gli utenti per ruolo e dipartimento.')
                 : entity === 'departments'
-                  ? tr('Create, edit and assign departments by company and head.', 'Creez, modifiez et assignez les departements par entreprise et responsable.')
+                  ? tr('Create, edit and assign departments by company and head.', 'Creez, modifiez et assignez les departements par entreprise et responsable.', 'Crea, modifica e assegna i dipartimenti per azienda e responsabile.')
                     : entity === 'documents'
-                        ? tr('Upload, share and manage documents from this panel.', 'Televersez, partagez et gerez les documents depuis ce panneau.')
-                : tr('Common CRUD shell', 'Conteneur CRUD commun');
+                        ? tr('Upload, share and manage documents from this panel.', 'Televersez, partagez et gerez les documents depuis ce panneau.', 'Carica, condividi e gestisci i documenti da questo pannello.')
+                : tr('Common CRUD shell', 'Conteneur CRUD commun', 'Shell CRUD comune');
           }
           if (crudBody && template) crudBody.innerHTML = template.innerHTML;
           setModalContent(entity);
@@ -1300,9 +1300,9 @@
     };
     const confirmAction = async (message) => {
       if (feedback?.confirm) {
-        return feedback.confirm(message, tr('Confirm action', 'Confirmer l action'));
+        return feedback.confirm(message, tr('Confirm action', 'Confirmer l action', 'Conferma azione'));
       }
-      notifyError(tr('Confirmation dialog is not available.', 'La boite de confirmation n est pas disponible.'));
+      notifyError(tr('Confirmation dialog is not available.', 'La boite de confirmation n est pas disponible.', 'La finestra di conferma non è disponibile.'));
       return false;
     };
 
@@ -1314,25 +1314,25 @@
           const action = btn.getAttribute('data-action');
           try {
             if (action === 'set-ip') {
-              const ip = prompt(tr('Signature IP address (leave blank to remove):', 'Adresse IP de signature (laisser vide pour supprimer) :'));
+              const ip = prompt(tr('Signature IP address (leave blank to remove):', 'Adresse IP de signature (laisser vide pour supprimer) :', 'Indirizzo IP di firma (lascia vuoto per rimuovere):'));
               if (ip === null) return;
               const j = await AppAPI.companies.setSignatureIp(apiCompanies, companyId, ip);
-              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ') + (j.error || tr('unknown', 'inconnue'))); else notifySuccess(tr('Company Wi-Fi IP updated.', 'IP Wi-Fi entreprise mise a jour.'));
+              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ', 'Errore: ') + (j.error || tr('unknown', 'inconnue', 'sconosciuto'))); else notifySuccess(tr('Company Wi-Fi IP updated.', 'IP Wi-Fi entreprise mise a jour.', 'IP Wi-Fi aziendale aggiornato.'));
               return;
             }
 
             if (action === 'delete') {
-              if (!await confirmAction(tr('Confirm deletion of this company?', 'Confirmer la suppression de cette entreprise ?'))) return;
+              if (!await confirmAction(tr('Confirm deletion of this company?', 'Confirmer la suppression de cette entreprise ?', 'Confermare l\'eliminazione di questa azienda?'))) return;
               const j = await AppAPI.companies.delete(apiCompanies, companyId);
-              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ') + (j.error || tr('unknown', 'inconnue'))); else location.reload();
+              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ', 'Errore: ') + (j.error || tr('unknown', 'inconnue', 'sconosciuto'))); else location.reload();
               return;
             }
 
             if (action === 'manage-departments') {
               const j = await AppAPI.departments.list(apiDepartments, companyId);
               if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
-              const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || tr('No departments', 'Aucun departement');
-              const cmd = prompt(tr('Departments:\n', 'Departements :\n') + list + tr('\n\nTo create: type a new name. To delete: del:<id>', '\n\nPour creer : tapez un nouveau nom. Pour supprimer : del:<id>'));
+              const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || tr('No departments', 'Aucun departement', 'Nessun dipartimento');
+              const cmd = prompt(tr('Departments:\n', 'Departements :\n', 'Dipartimenti:\n') + list + tr('\n\nTo create: type a new name. To delete: del:<id>', '\n\nPour creer : tapez un nouveau nom. Pour supprimer : del:<id>', '\n\nPer creare: digita un nuovo nome. Per eliminare: del:<id>'));
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
@@ -1348,27 +1348,27 @@
             if (action === 'manage-employees') {
               const j = await AppAPI.users.listByCompany(apiUsers, companyId);
               if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
-              const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || tr('No employees', 'Aucun employe');
-              const cmd = prompt(tr('Employees:\n', 'Employes :\n') + list + tr('\n\nTo create: new:First Last,email,role. To delete: del:<id>', '\n\nPour creer : new:Prenom Nom,email,role. Pour supprimer : del:<id>'));
+              const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || tr('No employees', 'Aucun employe', 'Nessun dipendente');
+              const cmd = prompt(tr('Employees:\n', 'Employes :\n', 'Dipendenti:\n') + list + tr('\n\nTo create: new:First Last,email,role. To delete: del:<id>', '\n\nPour creer : new:Prenom Nom,email,role. Pour supprimer : del:<id>', '\n\nPer creare: new:Nome Cognome,email,ruolo. Per eliminare: del:<id>'));
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
                 const jr = await AppAPI.users.delete(apiUsers, id);
-                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ', 'Errore: ') + (jr.error || tr('unknown', 'inconnue', 'sconosciuto'))); else location.reload();
               } else if (cmd.startsWith('new:')) {
                 const payload = cmd.substring(4).split(',');
                 const name = payload[0] || ''; const email = payload[1] || ''; const role = payload[2] || 'employee';
                 const names = name.split(' '); const first = names.shift(); const last = names.join(' ') || '';
                 const jr = await AppAPI.users.create(apiUsers, { department_id: null, first_name: first, last_name: last, email, role });
-                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ', 'Errore: ') + (jr.error || tr('unknown', 'inconnue', 'sconosciuto'))); else location.reload();
               }
               return;
             }
 
-            if (action === 'assign-head') { notifyError(tr('Use the Manage Employees flow and assign-head through the next UI step.', 'Utilisez le flux Gerer les employes puis assignez le responsable a l etape suivante.')); return; }
-            if (action === 'edit') { notifyError(tr('Edit company UI is not implemented yet.', 'L interface de modification entreprise n est pas encore implementee.')); return; }
+            if (action === 'assign-head') { notifyError(tr('Use the Manage Employees flow and assign-head through the next UI step.', 'Utilisez le flux Gerer les employes puis assignez le responsable a l etape suivante.', 'Usa il flusso Gestisci dipendenti e assegna il responsabile nel passaggio successivo.')); return; }
+            if (action === 'edit') { notifyError(tr('Edit company UI is not implemented yet.', 'L interface de modification entreprise n est pas encore implementee.', 'L\'interfaccia di modifica azienda non è ancora implementata.')); return; }
 
-          } catch (err) { notifyError(tr('Network error: ', 'Erreur reseau : ') + err.message); }
+          } catch (err) { notifyError(tr('Network error: ', 'Erreur reseau : ', 'Errore di rete: ') + err.message); }
         });
       });
     });
@@ -1383,14 +1383,14 @@
     const feedback = window.DashboardFeedback;
     const notifyError = (message) => {
       if (feedback?.error) {
-        feedback.error(tr('Oops!', 'Erreur'), message);
+        feedback.error(tr('Oops!', 'Erreur', 'Errore'), message);
         return;
       }
       console.error(message);
     };
     const notifySuccess = (message) => {
       if (feedback?.success) {
-        feedback.success(tr('Done', 'Termine'), message);
+        feedback.success(tr('Done', 'Termine', 'Fatto'), message);
         return;
       }
       console.info(message);
@@ -1473,12 +1473,12 @@
       start.setDate(start.getDate() + offset);
       return start;
     };
-    const localeForDates = isFr ? 'fr-FR' : 'en-US';
+    const localeForDates = isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US');
     const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { month: 'short' }).format(new Date(2024, index, 1)));
     const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
     const fullDateFormatter = new Intl.DateTimeFormat(localeForDates, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     const weekdayShortFormatter = new Intl.DateTimeFormat(localeForDates, { weekday: 'short' });
-    const shortDateFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const shortDateFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-GB'), { day: '2-digit', month: '2-digit', year: '2-digit' });
     const monthYearFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long', year: 'numeric' });
     const monthLabelFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long' });
 
@@ -1688,13 +1688,13 @@
           const userId = Number(user?.id || 0);
           if (!userId || seen.has(userId)) return;
           seen.add(userId);
-          const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${userId}`;
+          const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || `${tr('Employee', 'Employe', 'Dipendente')} #${userId}`;
           candidates.push({
             id: userId,
             name: fullName,
             role: String(user?.role || '').toLowerCase(),
             departmentId: Number(department?.id || 0),
-            departmentName: String(department?.name || tr('Department', 'Departement')),
+            departmentName: String(department?.name || tr('Department', 'Departement', 'Dipartimento')),
             priority,
           });
         });
@@ -1788,12 +1788,12 @@
 
       const currentRole = String(currentUser?.role || '').toLowerCase();
       if (!['super_admin', 'admin'].includes(currentRole)) {
-        notifyError(tr('Only admin profiles can transfer employees between departments.', 'Seuls les profils admin peuvent transferer des employes entre departements.'));
+        notifyError(tr('Only admin profiles can transfer employees between departments.', 'Seuls les profils admin peuvent transferer des employes entre departements.', 'Solo i profili admin possono trasferire dipendenti tra dipartimenti.'));
         return;
       }
 
       if (!apiUsers || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-        notifyError(tr('Users API is not available.', 'API utilisateurs indisponible.'));
+        notifyError(tr('Users API is not available.', 'API utilisateurs indisponible.', 'API utenti non disponibile.'));
         return;
       }
 
@@ -1802,7 +1802,7 @@
       ) || null;
       const targetDepartment = departments.find((department) => Number(department?.id || 0) === normalizedTargetDepartmentId) || null;
       if (!targetDepartment) {
-        notifyError(tr('Target department not found.', 'Departement cible introuvable.'));
+        notifyError(tr('Target department not found.', 'Departement cible introuvable.', 'Dipartimento di destinazione non trovato.'));
         return;
       }
       if (sourceDepartment && Number(sourceDepartment.id || 0) === normalizedTargetDepartmentId) {
@@ -1813,12 +1813,12 @@
         || (sourceDepartment?.users || []).find((entry) => Number(entry?.id || 0) === normalizedUserId)
         || null;
       if (!userRecord) {
-        notifyError(tr('Employee not found.', 'Employe introuvable.'));
+        notifyError(tr('Employee not found.', 'Employe introuvable.', 'Dipendente non trovato.'));
         return;
       }
 
       const userName = `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim()
-        || `${tr('Employee', 'Employe')} #${normalizedUserId}`;
+        || `${tr('Employee', 'Employe', 'Dipendente')} #${normalizedUserId}`;
       const response = await window.AppAPI.postJSON(apiUsers, {
         action: 'transfer_department',
         user_id: normalizedUserId,
@@ -1827,11 +1827,11 @@
 
       if (!response || response.ok === false || response.success === false) {
         notifyError((response && (response.error || response.message))
-          || tr('Unable to transfer employee.', 'Impossible de transferer l employe.'));
+          || tr('Unable to transfer employee.', 'Impossible de transferer l employe.', 'Impossibile trasferire il dipendente.'));
         return;
       }
 
-      const nextDepartmentName = String(targetDepartmentName || targetDepartment?.name || tr('Department', 'Departement'));
+      const nextDepartmentName = String(targetDepartmentName || targetDepartment?.name || tr('Department', 'Departement', 'Dipartimento'));
 
       departments.forEach((department) => {
         if (!Array.isArray(department.users)) {
@@ -1866,9 +1866,10 @@
       renderSidebarPlanner();
       renderCalendar();
       if (feedback?.success) {
-        feedback.success(tr('Done', 'Termine'), tr(
+        feedback.success(tr('Done', 'Termine', 'Fatto'), tr(
           `${userName} moved to ${nextDepartmentName}.`,
-          `${userName} transfere vers ${nextDepartmentName}.`
+          `${userName} transfere vers ${nextDepartmentName}.`,
+          `${userName} trasferito in ${nextDepartmentName}.`
         ));
       }
     };
@@ -1952,8 +1953,8 @@
     };
 
     const summarizeShiftName = (shift) => {
-      if (!shift) return tr('Shift', 'Poste');
-      const name = String(shift.name || tr('Shift', 'Poste'));
+      if (!shift) return tr('Shift', 'Poste', 'Turno');
+      const name = String(shift.name || tr('Shift', 'Poste', 'Turno'));
       return `${name} ${formatShiftTime(shift)}`;
     };
 
@@ -2022,7 +2023,7 @@
         const weekStartDate = parseDateKeyToLocalDate(sidebarPlanState.weekStart) || startOfWeek(state.focusDate);
         const startDate = startOfWeek(weekStartDate);
         const endDate = addDays(startDate, 6);
-        return { startDate, endDate, label: tr('Selected week', 'Semaine selectionnee') };
+        return { startDate, endDate, label: tr('Selected week', 'Semaine selectionnee', 'Settimana selezionata') };
       }
 
       if (mode === 'month') {
@@ -2032,11 +2033,11 @@
         const month = Number(monthRaw);
         const startDate = new Date(year, month - 1, 1, 12, 0, 0, 0);
         const endDate = new Date(year, month, 0, 12, 0, 0, 0);
-        return { startDate, endDate, label: tr('Selected month', 'Mois selectionne') };
+        return { startDate, endDate, label: tr('Selected month', 'Mois selectionne', 'Mese selezionato') };
       }
 
       const range = getVisibleRange();
-      return { startDate: new Date(range.start), endDate: new Date(range.end), label: tr('Current calendar view', 'Vue calendrier courante') };
+      return { startDate: new Date(range.start), endDate: new Date(range.end), label: tr('Current calendar view', 'Vue calendrier courante', 'Vista calendario corrente') };
     };
 
     const getSidebarWeekdayPlan = () => {
@@ -2056,7 +2057,7 @@
           weekPattern.push({
             type: 'rest',
             shiftId: Number(restShift?.id || rawValue.split(':')[1] || 0),
-            label: tr('Rest day', 'Repos'),
+            label: tr('Rest day', 'Repos', 'Riposo'),
           });
           continue;
         }
@@ -2066,7 +2067,7 @@
         weekPattern.push({
           type: 'work',
           shiftId,
-          label: shift ? summarizeShiftName(shift) : tr('Work day', 'Jour de travail'),
+          label: shift ? summarizeShiftName(shift) : tr('Work day', 'Jour de travail', 'Giorno di lavoro'),
         });
       }
 
@@ -2122,7 +2123,7 @@
             alreadyAssigned: 0,
             rangeLabel: '',
           },
-          error: tr('Select an employee first.', 'Selectionnez d abord un employe.'),
+          error: tr('Select an employee first.', 'Selectionnez d abord un employe.', 'Seleziona prima un dipendente.'),
         };
       }
 
@@ -2143,7 +2144,7 @@
             alreadyAssigned: 0,
             rangeLabel: '',
           },
-          error: tr('Choose one shift or rest day for each weekday.', 'Choisissez un poste ou un repos pour chaque jour de la semaine.'),
+          error: tr('Choose one shift or rest day for each weekday.', 'Choisissez un poste ou un repos pour chaque jour de la semaine.', 'Scegli un turno o un riposo per ogni giorno della settimana.'),
         };
       }
 
@@ -2196,30 +2197,30 @@
         }
 
         const plannedLabel = targetShiftId <= 0
-          ? tr('Skip day', 'Ignorer le jour')
+          ? tr('Skip day', 'Ignorer le jour', 'Salta giorno')
           : summarizeShiftName(plannedShift);
 
         let status = 'available';
-        let note = tr('Ready to assign.', 'Pret a assigner.');
+        let note = tr('Ready to assign.', 'Pret a assigner.', 'Pronto per l\'assegnazione.');
         let actionable = true;
 
         if (isPast) {
           status = 'past';
-          note = tr('Past day: skipped.', 'Jour passe : ignore.');
+          note = tr('Past day: skipped.', 'Jour passe : ignore.', 'Giorno passato: saltato.');
           actionable = false;
           summary.past += 1;
         } else if (targetShiftId <= 0) {
           status = 'skip';
-          note = tr('No assignment planned for this day.', 'Aucune affectation prevue pour ce jour.');
+          note = tr('No assignment planned for this day.', 'Aucune affectation prevue pour ce jour.', 'Nessuna assegnazione prevista per questo giorno.');
           actionable = false;
         } else if (dayPlan.type === 'rest' && !restShift) {
           status = 'unavailable';
-          note = tr('No rest shift template configured for this department.', 'Aucun modele de repos configure pour ce departement.');
+          note = tr('No rest shift template configured for this department.', 'Aucun modele de repos configure pour ce departement.', 'Nessun modello di riposo configurato per questo dipartimento.');
           actionable = false;
           summary.unavailable += 1;
         } else if (existingAssignments.length > 1) {
           status = 'conflict';
-          note = tr('Employee already has multiple assignments on this day.', 'Employe deja affecte plusieurs fois ce jour.');
+          note = tr('Employee already has multiple assignments on this day.', 'Employe deja affecte plusieurs fois ce jour.', 'Il dipendente ha già più assegnazioni in questo giorno.');
           actionable = !!sidebarPlanState.allowOverride;
           summary.conflicts += 1;
         } else if (existingAssignments.length === 1) {
@@ -2229,20 +2230,20 @@
           const sameAsPlan = existingShiftId === targetShiftId || (targetShiftKind === 'rest' && existingKind === 'rest');
           if (sameAsPlan) {
             status = 'already';
-            note = tr('Already assigned with the same plan.', 'Deja affecte avec le meme plan.');
+            note = tr('Already assigned with the same plan.', 'Deja affecte avec le meme plan.', 'Già assegnato con lo stesso piano.');
             actionable = false;
             summary.alreadyAssigned += 1;
           } else {
             status = 'conflict';
             note = sidebarPlanState.allowOverride
-              ? tr('Will replace existing assignment.', 'Remplacera l affectation existante.')
-              : tr('Existing assignment found. Enable override to replace.', 'Affectation existante detectee. Activez le remplacement.');
+              ? tr('Will replace existing assignment.', 'Remplacera l affectation existante.', 'Sostituirà l\'assegnazione esistente.')
+              : tr('Existing assignment found. Enable override to replace.', 'Affectation existante detectee. Activez le remplacement.', 'Assegnazione esistente trovata. Attiva la sostituzione per procedere.');
             actionable = !!sidebarPlanState.allowOverride;
             summary.conflicts += 1;
           }
         } else if (targetShiftKind === 'work' && !availability.available) {
           status = 'unavailable';
-          note = availability.reason || tr('Unavailable by rules.', 'Indisponible selon les regles.');
+          note = availability.reason || tr('Unavailable by rules.', 'Indisponible selon les regles.', 'Non disponibile secondo le regole.');
           actionable = false;
           summary.unavailable += 1;
         } else {
@@ -2259,9 +2260,10 @@
             note = firstName
               ? tr(
                 `Shift already assigned to ${firstName}.`,
-                `Poste deja assigne a ${firstName}.`
+                `Poste deja assigne a ${firstName}.`,
+                `Turno già assegnato a ${firstName}.`
               )
-              : tr('Shift already assigned to another employee.', 'Poste deja assigne a un autre employe.');
+              : tr('Shift already assigned to another employee.', 'Poste deja assigne a un autre employe.', 'Turno già assegnato a un altro dipendente.');
             actionable = !!sidebarPlanState.allowOverride;
             summary.conflicts += 1;
           } else {
@@ -2304,9 +2306,9 @@
       summaryWrap.innerHTML = `
         <div class="dashboard-sidebar-plan-stats">
           <span>${escapeHtml(summary.rangeLabel || '')}</span>
-          <span>${tr('Planned', 'Planifies')}: <strong>${Number(summary.planned || 0)}</strong></span>
-          <span>${tr('Assignable', 'A affecter')}: <strong>${Number(summary.available || 0)}</strong></span>
-          <span>${tr('Conflicts', 'Conflits')}: <strong>${Number(summary.conflicts || 0)}</strong></span>
+          <span>${tr('Planned', 'Planifies', 'Pianificati')}: <strong>${Number(summary.planned || 0)}</strong></span>
+          <span>${tr('Assignable', 'A affecter', 'Assegnabili')}: <strong>${Number(summary.available || 0)}</strong></span>
+          <span>${tr('Conflicts', 'Conflits', 'Conflitti')}: <strong>${Number(summary.conflicts || 0)}</strong></span>
         </div>
       `;
 
@@ -2314,19 +2316,19 @@
       const editableShifts = (activeDepartment?.shifts || []).slice();
       previewWrap.innerHTML = result.items.map((item) => {
         const statusLabel = item.status === 'available'
-          ? tr('Available', 'Disponible')
+          ? tr('Available', 'Disponible', 'Disponibile')
           : item.status === 'already'
-            ? tr('Already assigned', 'Deja affecte')
+            ? tr('Already assigned', 'Deja affecte', 'Già assegnato')
             : item.status === 'past'
-              ? tr('Past day', 'Jour passe')
+              ? tr('Past day', 'Jour passe', 'Giorno passato')
               : item.status === 'skip'
-                ? tr('Skipped', 'Ignore')
+                ? tr('Skipped', 'Ignore', 'Saltato')
               : item.status === 'conflict'
-                ? tr('Conflict', 'Conflit')
-                : tr('Unavailable', 'Indisponible');
+                ? tr('Conflict', 'Conflit', 'Conflitto')
+                : tr('Unavailable', 'Indisponible', 'Non disponibile');
 
         const options = [
-          `<option value="skip" ${Number(item.targetShiftId || 0) <= 0 ? 'selected' : ''}>${escapeHtml(tr('Skip day', 'Ignorer le jour'))}</option>`,
+          `<option value="skip" ${Number(item.targetShiftId || 0) <= 0 ? 'selected' : ''}>${escapeHtml(tr('Skip day', 'Ignorer le jour', 'Salta giorno'))}</option>`,
           ...editableShifts.map((shift) => {
             const shiftId = Number(shift.id || 0);
             const selected = shiftId === Number(item.targetShiftId || 0) ? 'selected' : '';
@@ -2352,7 +2354,7 @@
             <span class="dashboard-sidebar-plan-tag is-${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           </article>
         `;
-      }).join('') || `<div class="dashboard-sidebar-plan-alert">${tr('No days in selected range.', 'Aucun jour dans la plage selectionnee.')}</div>`;
+      }).join('') || `<div class="dashboard-sidebar-plan-alert">${tr('No days in selected range.', 'Aucun jour dans la plage selectionnee.', 'Nessun giorno nell\'intervallo selezionato.')}</div>`;
 
       previewWrap.querySelectorAll('[data-sidebar-plan-row-shift]').forEach((select) => {
         select.addEventListener('change', () => {
@@ -2371,7 +2373,7 @@
 
       const actionableCount = result.items.filter((item) => item.actionable).length;
       applyBtn.disabled = actionableCount <= 0;
-      applyBtn.textContent = tr('Apply plan', 'Appliquer le plan') + ` (${actionableCount})`;
+      applyBtn.textContent = tr('Apply plan', 'Appliquer le plan', 'Applica piano') + ` (${actionableCount})`;
     };
 
     const handleSidebarPlanPreview = (host) => {
@@ -2385,17 +2387,17 @@
       if (sidebarPlanState.applying) return;
       const activeUser = getActiveUser();
       if (!activeUser) {
-        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.'));
+        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.', 'Seleziona prima un dipendente.'));
         return;
       }
       if (!Array.isArray(sidebarPlanState.preview) || sidebarPlanState.preview.length === 0) {
-        notifyError(tr('Generate a preview before applying.', 'Generez un apercu avant d appliquer.'));
+        notifyError(tr('Generate a preview before applying.', 'Generez un apercu avant d appliquer.', 'Genera un\'anteprima prima di applicare.'));
         return;
       }
 
       const tasks = sidebarPlanState.preview.filter((item) => item.actionable && Number(item.targetShiftId || 0) > 0);
       if (!tasks.length) {
-        notifyError(tr('No assignable days in the current preview.', 'Aucun jour affectable dans l apercu courant.'));
+        notifyError(tr('No assignable days in the current preview.', 'Aucun jour affectable dans l apercu courant.', 'Nessun giorno assegnabile nell\'anteprima corrente.'));
         return;
       }
 
@@ -2424,13 +2426,15 @@
       if (successCount > 0) {
         notifySuccess(tr(
           `Shift plan applied on ${successCount} day(s).`,
-          `Plan de postes applique sur ${successCount} jour(s).`
+          `Plan de postes applique sur ${successCount} jour(s).`,
+          `Piano turni applicato su ${successCount} giorno/i.`
         ));
       }
       if (errorCount > 0) {
         notifyError(tr(
           `${errorCount} day(s) could not be assigned.`,
-          `${errorCount} jour(s) n ont pas pu etre affectes.`
+          `${errorCount} jour(s) n ont pas pu etre affectes.`,
+          `Impossibile assegnare ${errorCount} giorno/i.`
         ));
       }
 
@@ -2440,12 +2444,12 @@
 
     const clearAssignmentsForActiveUserInPlanRange = async () => {
       if (!apiDashboard || !window.AppAPI) {
-        notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+        notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API dashboard non disponibile.'));
         return;
       }
       const activeUser = getActiveUser();
       if (!activeUser) {
-        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.'));
+        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.', 'Seleziona prima un dipendente.'));
         return;
       }
 
@@ -2456,11 +2460,12 @@
         ? await feedback.confirm(
           tr(
             `Clear all assignments for ${activeUser.first_name || ''} ${activeUser.last_name || ''} in selected period?`,
-            `Effacer toutes les affectations pour ${activeUser.first_name || ''} ${activeUser.last_name || ''} sur la periode selectionnee ?`
+            `Effacer toutes les affectations pour ${activeUser.first_name || ''} ${activeUser.last_name || ''} sur la periode selectionnee ?`,
+            `Cancellare tutte le assegnazioni di ${activeUser.first_name || ''} ${activeUser.last_name || ''} nel periodo selezionato?`
           ),
-          tr('Confirm action', 'Confirmer l action')
+          tr('Confirm action', 'Confirmer l action', 'Conferma azione')
         )
-        : window.confirm(tr('Clear all assignments for selected employee in this period?', 'Effacer toutes les affectations de l employe selectionne sur cette periode ?'));
+        : window.confirm(tr('Clear all assignments for selected employee in this period?', 'Effacer toutes les affectations de l employe selectionne sur cette periode ?', 'Cancellare tutte le assegnazioni del dipendente selezionato in questo periodo?'));
 
       if (!canClear) return;
 
@@ -2476,7 +2481,7 @@
         });
 
         if (!response || response.ok === false || response.success === false) {
-          throw new Error(response?.error || response?.message || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.'));
+          throw new Error(response?.error || response?.message || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.', 'Impossibile cancellare le assegnazioni.'));
         }
 
         const clearedCount = Number(response.cleared_count || 0);
@@ -2499,12 +2504,13 @@
         sidebarPlanState.summary = null;
         notifySuccess(tr(
           `Cleared ${clearedCount} assignment(s) for selected employee.`,
-          `${clearedCount} affectation(s) effacee(s) pour l employe selectionne.`
+          `${clearedCount} affectation(s) effacee(s) pour l employe selectionne.`,
+          `${clearedCount} assegnazione/i cancellata/e per il dipendente selezionato.`
         ));
         renderSidebarPlanner();
         renderCalendar();
       } catch (error) {
-        notifyError((error && error.message) || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.'));
+        notifyError((error && error.message) || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.', 'Impossibile cancellare le assegnazioni.'));
       }
     };
 
@@ -2542,7 +2548,7 @@
     const getCalendarCounters = () => {
       const activeDepartment = getActiveDepartment();
       if (!activeDepartment) {
-        return { title: tr('Calendar', 'Calendrier'), totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
+        return { title: tr('Calendar', 'Calendrier', 'Calendario'), totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
       }
 
       const shifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
@@ -2650,7 +2656,7 @@
       if (!plannerDetail) return;
       const activeDepartment = getActiveDepartment();
       if (!activeDepartment) {
-        plannerDetail.innerHTML = `<div class="dashboard-sidebar-planner-placeholder">${tr('No departments available.', 'Aucun departement disponible.')}</div>`;
+        plannerDetail.innerHTML = `<div class="dashboard-sidebar-planner-placeholder">${tr('No departments available.', 'Aucun departement disponible.', 'Nessun dipartimento disponibile.')}</div>`;
         return;
       }
 
@@ -2663,76 +2669,76 @@
       if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
         state.activeShiftId = Number(workShifts[0].id || 0);
       }
-      const deptName = activeDepartment.name || tr('Department', 'Departement');
+      const deptName = activeDepartment.name || tr('Department', 'Departement', 'Dipartimento');
       const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
       const deptColor = (activeDepartment.color || '#b98b12').toString();
       const activeShift = getActiveShift();
       const activeUser = getActiveUser();
       const activeUserName = activeUser
-        ? `${activeUser.first_name || ''} ${activeUser.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${activeUser.id}`
+        ? `${activeUser.first_name || ''} ${activeUser.last_name || ''}`.trim() || `${tr('Employee', 'Employe', 'Dipendente')} #${activeUser.id}`
         : '';
       const periodOptions = [
-        { value: 'auto', label: tr('Current calendar view', 'Vue calendrier courante') },
-        { value: 'week', label: tr('Specific week', 'Semaine specifique') },
-        { value: 'month', label: tr('Full month', 'Mois complet') },
+        { value: 'auto', label: tr('Current calendar view', 'Vue calendrier courante', 'Vista calendario corrente') },
+        { value: 'week', label: tr('Specific week', 'Semaine specifique', 'Settimana specifica') },
+        { value: 'month', label: tr('Full month', 'Mois complet', 'Mese completo') },
       ];
       const weekdayLabels = [
-        tr('Monday', 'Lundi'),
-        tr('Tuesday', 'Mardi'),
-        tr('Wednesday', 'Mercredi'),
-        tr('Thursday', 'Jeudi'),
-        tr('Friday', 'Vendredi'),
-        tr('Saturday', 'Samedi'),
-        tr('Sunday', 'Dimanche'),
+        tr('Monday', 'Lundi', 'Lunedì'),
+        tr('Tuesday', 'Mardi', 'Martedì'),
+        tr('Wednesday', 'Mercredi', 'Mercoledì'),
+        tr('Thursday', 'Jeudi', 'Giovedì'),
+        tr('Friday', 'Vendredi', 'Venerdì'),
+        tr('Saturday', 'Samedi', 'Sabato'),
+        tr('Sunday', 'Dimanche', 'Domenica'),
       ];
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
           <span style="color:${escapeHtml(deptColor)}">${renderIconHtml(deptIcon, deptColor)} ${escapeHtml(deptName)}</span>
-          <span>${users.length} ${tr('staff', 'personnel')}</span>
+          <span>${users.length} ${tr('staff', 'personnel', 'personale')}</span>
         </div>
-        <div class="dashboard-sidebar-planner-description">${activeDepartment.description || tr('Assigned team and shift list.', 'Equipe assignee et liste des postes.')}</div>
+        <div class="dashboard-sidebar-planner-description">${activeDepartment.description || tr('Assigned team and shift list.', 'Equipe assignee et liste des postes.', 'Team assegnato ed elenco dei turni.')}</div>
         <div>
-          <div class="dashboard-sidebar-group-title"><span>👤</span> ${tr('Employees', 'Employes')}</div>
+          <div class="dashboard-sidebar-group-title"><span>👤</span> ${tr('Employees', 'Employes', 'Dipendenti')}</div>
           <div class="dashboard-sidebar-chip-group">
             ${users.length ? users.map((user) => {
               const userId = Number(user.id || 0);
-              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${userId}`;
+              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || `${tr('Employee', 'Employe', 'Dipendente')} #${userId}`;
               const isActiveUser = userId === Number(state.activeUserId || 0);
               return `
               <article class="dashboard-sidebar-user-card ${isActiveUser ? 'is-active' : ''}" data-sidebar-user-card="${userId}" data-user-id="${userId}" data-user-name="${userName}">
-                <button type="button" class="dashboard-sidebar-user-chip ${isActiveUser ? 'is-active' : ''}" draggable="true" data-user-id="${userId}" data-user-name="${userName}" title="${tr('Click or drag to calendar', 'Cliquez ou glissez vers le calendrier')}">
+                <button type="button" class="dashboard-sidebar-user-chip ${isActiveUser ? 'is-active' : ''}" draggable="true" data-user-id="${userId}" data-user-name="${userName}" title="${tr('Click or drag to calendar', 'Cliquez ou glissez vers le calendrier', 'Clicca o trascina verso il calendario')}">
                   ${userName}
                 </button>
               </article>
             `;
-            }).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No employees in this department.', 'Aucun employe dans ce departement.')}</div>`}
+            }).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No employees in this department.', 'Aucun employe dans ce departement.', 'Nessun dipendente in questo dipartimento.')}</div>`}
           </div>
         </div>
         <div>
-          <div class="dashboard-sidebar-group-title"><span>⏱</span> ${tr('Shifts', 'Postes')}</div>
+          <div class="dashboard-sidebar-group-title"><span>⏱</span> ${tr('Shifts', 'Postes', 'Turni')}</div>
           <div class="dashboard-sidebar-chip-group">
             ${workShifts.length ? workShifts.map((shift) => `
               <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}" style="--shift-chip-color:${(shift.color || '#2f6fed')}">
                 <span class="dashboard-sidebar-shift-icon">${renderIconHtml(shift.icon, shift.color || '#2f6fed')}</span>
-                <span>${shift.name || tr('Shift', 'Poste')} ${formatShiftTime(shift)}</span>
+                <span>${shift.name || tr('Shift', 'Poste', 'Turno')} ${formatShiftTime(shift)}</span>
               </button>
-            `).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No work shifts configured.', 'Aucun poste de travail configure.')}</div>`}
+            `).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No work shifts configured.', 'Aucun poste de travail configure.', 'Nessun turno di lavoro configurato.')}</div>`}
           </div>
         </div>
         <section class="dashboard-sidebar-plan-flow ${activeUser ? 'is-ready' : 'is-disabled'}" data-sidebar-plan-flow>
-          <div class="dashboard-sidebar-group-title"><span>🧩</span> ${tr('Shift Assignment Wizard', 'Assistant d affectation des postes')}</div>
+          <div class="dashboard-sidebar-group-title"><span>🧩</span> ${tr('Shift Assignment Wizard', 'Assistant d affectation des postes', 'Assistente assegnazione turni')}</div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="1">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="1" role="button" tabindex="0" aria-expanded="false">
-              <span>${tr('Step 1', 'Etape 1')}: ${tr('Choose employee', 'Choisir un employe')}</span>
+              <span>${tr('Step 1', 'Etape 1', 'Passaggio 1')}: ${tr('Choose employee', 'Choisir un employe', 'Scegli un dipendente')}</span>
               <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
             </strong>
             <p>${activeUser
-              ? `${tr('Selected', 'Selectionne')} : ${escapeHtml(activeUserName)}`
-              : tr('Select an employee above to continue.', 'Selectionnez un employe ci-dessus pour continuer.')}</p>
+              ? `${tr('Selected', 'Selectionne', 'Selezionato')} : ${escapeHtml(activeUserName)}`
+              : tr('Select an employee above to continue.', 'Selectionnez un employe ci-dessus pour continuer.', 'Seleziona un dipendente qui sopra per continuare.')}</p>
           </div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="2">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="2" role="button" tabindex="0" aria-expanded="false">
-              <span>${tr('Step 2', 'Etape 2')}: ${tr('Choose working and rest days', 'Choisir les jours de travail et de repos')}</span>
+              <span>${tr('Step 2', 'Etape 2', 'Passaggio 2')}: ${tr('Choose working and rest days', 'Choisir les jours de travail et de repos', 'Scegli i giorni di lavoro e di riposo')}</span>
               <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
             </strong>
             <div class="dashboard-sidebar-plan-week-grid">
@@ -2743,48 +2749,48 @@
                     <span>${escapeHtml(label)}</span>
                     <select data-sidebar-plan-weekday="${weekdayIndex}">
                       ${workShifts.map((shift) => `<option value="${shift.id}" ${String(shift.id) === selectedValue ? 'selected' : ''}>${escapeHtml(summarizeShiftName(shift))}</option>`).join('')}
-                      <option value="${escapeHtml(restShift ? `rest:${Number(restShift.id || 0)}` : 'rest')}" ${(selectedValue === 'rest' || selectedValue.startsWith('rest:')) ? 'selected' : ''}>${escapeHtml(tr('Rest day', 'Jour de repos'))}</option>
+                      <option value="${escapeHtml(restShift ? `rest:${Number(restShift.id || 0)}` : 'rest')}" ${(selectedValue === 'rest' || selectedValue.startsWith('rest:')) ? 'selected' : ''}>${escapeHtml(tr('Rest day', 'Jour de repos', 'Giorno di riposo'))}</option>
                     </select>
                   </label>
                 `;
               }).join('')}
             </div>
-            <p>${tr('Choose one rule per weekday: work on a specific shift or weekly rest.', 'Choisissez une regle par jour : travail sur un poste precis ou repos hebdomadaire.')}</p>
+            <p>${tr('Choose one rule per weekday: work on a specific shift or weekly rest.', 'Choisissez une regle par jour : travail sur un poste precis ou repos hebdomadaire.', 'Scegli una regola per ogni giorno: lavoro su un turno specifico o riposo settimanale.')}</p>
           </div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="3">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="3" role="button" tabindex="0" aria-expanded="false">
-              <span>${tr('Step 3', 'Etape 3')}: ${tr('Choose period and conflict policy', 'Choisir la periode et la politique de conflit')}</span>
+              <span>${tr('Step 3', 'Etape 3', 'Passaggio 3')}: ${tr('Choose period and conflict policy', 'Choisir la periode et la politique de conflit', 'Scegli il periodo e la politica dei conflitti')}</span>
               <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
             </strong>
             <label class="dashboard-sidebar-plan-select-row">
-              <span>${tr('Planning period', 'Periode de planification')}</span>
+              <span>${tr('Planning period', 'Periode de planification', 'Periodo di pianificazione')}</span>
               <select data-sidebar-plan-period>
                 ${periodOptions.map((option) => `<option value="${option.value}" ${option.value === sidebarPlanState.periodMode ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
               </select>
             </label>
             <label class="dashboard-sidebar-plan-select-row">
-              <span>${tr('Week start', 'Debut semaine')}</span>
+              <span>${tr('Week start', 'Debut semaine', 'Inizio settimana')}</span>
               <input type="date" value="${escapeHtml(sidebarPlanState.weekStart || dateKey(startOfWeek(state.focusDate)))}" data-sidebar-plan-week-start>
             </label>
             <label class="dashboard-sidebar-plan-select-row">
-              <span>${tr('Month', 'Mois')}</span>
+              <span>${tr('Month', 'Mois', 'Mese')}</span>
               <input type="month" value="${escapeHtml(sidebarPlanState.monthKey || dateKey(state.focusDate).slice(0, 7))}" data-sidebar-plan-month>
             </label>
             <label class="dashboard-sidebar-plan-toggle-row">
               <input type="checkbox" ${sidebarPlanState.allowOverride ? 'checked' : ''} data-sidebar-plan-override>
-              <span>${tr('Allow override on double assignment days', 'Autoriser le remplacement sur les jours de double affectation')}</span>
+              <span>${tr('Allow override on double assignment days', 'Autoriser le remplacement sur les jours de double affectation', 'Consenti la sostituzione nei giorni con doppia assegnazione')}</span>
             </label>
-            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-preview-trigger>${tr('Preview availability and conflicts', 'Apercu disponibilites et conflits')}</button>
+            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-preview-trigger>${tr('Preview availability and conflicts', 'Apercu disponibilites et conflits', 'Anteprima disponibilità e conflitti')}</button>
           </div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="4">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="4" role="button" tabindex="0" aria-expanded="false">
-              <span>${tr('Step 4', 'Etape 4')}: ${tr('Review and apply', 'Verifier et appliquer')}</span>
+              <span>${tr('Step 4', 'Etape 4', 'Passaggio 4')}: ${tr('Review and apply', 'Verifier et appliquer', 'Verifica e applica')}</span>
               <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
             </strong>
             <div class="dashboard-sidebar-plan-summary" data-sidebar-plan-summary></div>
             <div class="dashboard-sidebar-plan-preview" data-sidebar-plan-preview></div>
-            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-clear-employee>${tr('Clear all assignments for this employee', 'Effacer toutes les affectations de cet employe')}</button>
-            <button type="button" class="dashboard-sidebar-control-button is-active" data-sidebar-plan-apply disabled>${tr('Apply plan', 'Appliquer le plan')}</button>
+            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-clear-employee>${tr('Clear all assignments for this employee', 'Effacer toutes les affectations de cet employe', 'Cancella tutte le assegnazioni di questo dipendente')}</button>
+            <button type="button" class="dashboard-sidebar-control-button is-active" data-sidebar-plan-apply disabled>${tr('Apply plan', 'Appliquer le plan', 'Applica piano')}</button>
           </div>
         </section>
       `;
@@ -2835,7 +2841,7 @@
       if (!activeUser) {
         const summaryNode = planFlow.querySelector('[data-sidebar-plan-summary]');
         if (summaryNode) {
-          summaryNode.innerHTML = `<div class="dashboard-sidebar-plan-alert">${tr('Select an employee to unlock planning steps.', 'Selectionnez un employe pour activer les etapes de planification.')}</div>`;
+          summaryNode.innerHTML = `<div class="dashboard-sidebar-plan-alert">${tr('Select an employee to unlock planning steps.', 'Selectionnez un employe pour activer les etapes de planification.', 'Seleziona un dipendente per sbloccare i passaggi di pianificazione.')}</div>`;
         }
         setExpandedPlanStep(planFlow, '1');
         return;
@@ -2970,7 +2976,7 @@
         ...payload,
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || tr('Unable to save assignment', 'Impossible d enregistrer l affectation'));
+        throw new Error(response?.error || response?.message || tr('Unable to save assignment', 'Impossible d enregistrer l affectation', 'Impossibile salvare l\'assegnazione'));
       }
       if (response.assignment) {
         upsertAssignment(response.assignment);
@@ -2985,7 +2991,7 @@
         ...payload,
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || tr('Unable to move assignment', 'Impossible de deplacer l affectation'));
+        throw new Error(response?.error || response?.message || tr('Unable to move assignment', 'Impossible de deplacer l affectation', 'Impossibile spostare l\'assegnazione'));
       }
       if (response.assignment) {
         upsertAssignment(response.assignment);
@@ -3000,7 +3006,7 @@
         assignment_id: Number(assignmentId),
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || tr('Unable to unassign shift', 'Impossible de desaffecter le poste'));
+        throw new Error(response?.error || response?.message || tr('Unable to unassign shift', 'Impossible de desaffecter le poste', 'Impossibile rimuovere l\'assegnazione del turno'));
       }
       const index = events.findIndex((item) => Number(item.assignment_id) === Number(assignmentId));
       if (index >= 0) {
@@ -3095,7 +3101,7 @@
       rangeInput.readOnly = false;
       rangeInput.setAttribute('inputmode', 'numeric');
       rangeInput.setAttribute('spellcheck', 'false');
-      rangeInput.setAttribute('aria-label', tr('Type a date range for the calendar', 'Saisissez une plage de dates pour le calendrier'));
+      rangeInput.setAttribute('aria-label', tr('Type a date range for the calendar', 'Saisissez une plage de dates pour le calendrier', 'Digita un intervallo di date per il calendario'));
 
       let previousRangeValue = rangeInput.value;
 

@@ -23,14 +23,15 @@
 
     const _atLocale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const _atIsFr = _atLocale.startsWith('fr');
-    const _atTr = (en, fr) => (_atIsFr ? fr : en);
+    const _atIsIt = _atLocale.startsWith('it');
+    const _atTr = (en, fr, it) => (_atIsFr ? fr : (_atIsIt && it ? it : en));
 
     async function confirmAction(message, title) {
-        if (!title) title = _atTr('Confirm action', "Confirmer l'action");
+        if (!title) title = _atTr('Confirm action', "Confirmer l'action", "Conferma l'azione");
         if (feedback?.confirm) {
             return feedback.confirm(message, title);
         }
-        notifyError(_atTr('Confirmation dialog is not available.', "La boîte de confirmation n'est pas disponible."));
+        notifyError(_atTr('Confirmation dialog is not available.', "La boîte de confirmation n'est pas disponible.", 'La finestra di conferma non è disponibile.'));
         return false;
     }
 
@@ -135,7 +136,7 @@
         const normalized = normalizeMonthKey(monthKey);
         if (!normalized) return '--';
         const date = new Date(`${normalized}-01T12:00:00`);
-        const formatter = new Intl.DateTimeFormat(_atIsFr ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' });
+        const formatter = new Intl.DateTimeFormat(_atIsFr ? 'fr-FR' : (_atIsIt ? 'it-IT' : 'en-US'), { month: 'long', year: 'numeric' });
         const label = formatter.format(date);
         return label.charAt(0).toUpperCase() + label.slice(1);
     }
@@ -270,9 +271,9 @@
         if (employeeHoursMonthSelect && employeeHoursMonthSelect.value !== normalizedMonth) {
             employeeHoursMonthSelect.value = normalizedMonth;
         }
-        employeeHoursMonthNode.textContent = `${_atTr('Target month', 'Mois cible')}: ${getMonthLabel(normalizedMonth)}`;
-        employeeHoursAssignedNode.textContent = `${_atTr('Planned (forecast)', 'Planifiees (previsionnel)')}: ${computeMonthlyAssignedHours(userId, normalizedMonth).toFixed(2)} h`;
-        employeeHoursWorkedNode.textContent = `${_atTr('Worked (historical)', 'Travaillees (historique)')}: ${computeMonthlyWorkedHours(userId, normalizedMonth).toFixed(2)} h`;
+        employeeHoursMonthNode.textContent = `${_atTr('Target month', 'Mois cible', 'Mese target')}: ${getMonthLabel(normalizedMonth)}`;
+        employeeHoursAssignedNode.textContent = `${_atTr('Planned (forecast)', 'Planifiees (previsionnel)', 'Pianificate (previsionale)')}: ${computeMonthlyAssignedHours(userId, normalizedMonth).toFixed(2)} h`;
+        employeeHoursWorkedNode.textContent = `${_atTr('Worked (historical)', 'Travaillees (historique)', 'Lavorate (storico)')}: ${computeMonthlyWorkedHours(userId, normalizedMonth).toFixed(2)} h`;
         if (employeeHoursAssignmentCountNode) {
             employeeHoursAssignmentCountNode.textContent = `${computeMonthlyAssignedShiftCount(userId, normalizedMonth)}`;
         }
@@ -297,9 +298,9 @@
         if (monthSelect && monthSelect.value !== normalizedMonth) {
             monthSelect.value = normalizedMonth;
         }
-        monthNode.textContent = `${_atTr('Target month', 'Mois cible')}: ${getMonthLabel(normalizedMonth)}`;
-        assignedNode.textContent = `${_atTr('Planned (forecast)', 'Planifiees (previsionnel)')}: ${computeMonthlyAssignedHours(userId, normalizedMonth).toFixed(2)} h`;
-        workedNode.textContent = `${_atTr('Worked (historical)', 'Travaillees (historique)')}: ${computeMonthlyWorkedHours(userId, normalizedMonth).toFixed(2)} h`;
+        monthNode.textContent = `${_atTr('Target month', 'Mois cible', 'Mese target')}: ${getMonthLabel(normalizedMonth)}`;
+        assignedNode.textContent = `${_atTr('Planned (forecast)', 'Planifiees (previsionnel)', 'Pianificate (previsionale)')}: ${computeMonthlyAssignedHours(userId, normalizedMonth).toFixed(2)} h`;
+        workedNode.textContent = `${_atTr('Worked (historical)', 'Travaillees (historique)', 'Lavorate (storico)')}: ${computeMonthlyWorkedHours(userId, normalizedMonth).toFixed(2)} h`;
         if (assignmentCountNode) {
             assignmentCountNode.textContent = `${computeMonthlyAssignedShiftCount(userId, normalizedMonth)}`;
         }
@@ -374,16 +375,16 @@
             if (employeeCheckInField) employeeCheckInField.value = toTimeInputValue(record.check_in_time);
             if (employeeCheckOutField) employeeCheckOutField.value = toTimeInputValue(record.check_out_time);
             const signedLabel = Number(record.digital_signature_id || 0) > 0
-                ? _atTr('signed', 'signée')
-                : _atTr('unsigned', 'non signée');
+                ? _atTr('signed', 'signée', 'firmata')
+                : _atTr('unsigned', 'non signée', 'non firmata');
             if (existingAttendanceNote) {
                 existingAttendanceNote.hidden = false;
                 existingAttendanceNote.textContent = canEditExistingAttendance
-                    ? `${_atTr('Existing attendance', 'Présence existante')} (${signedLabel}). ${_atTr('You can edit it and save the changes. Drawing a new signature replaces the current one.', 'Vous pouvez la modifier et enregistrer les changements. Une nouvelle signature remplace la signature actuelle.')}`
-                    : `${_atTr('Existing attendance', 'Présence existante')} (${signedLabel}). ${_atTr('Read only: only an administrator can edit it.', 'Lecture seule : seul un administrateur peut la modifier.')}`;
+                    ? `${_atTr('Existing attendance', 'Présence existante', 'Presenza esistente')} (${signedLabel}). ${_atTr('You can edit it and save the changes. Drawing a new signature replaces the current one.', 'Vous pouvez la modifier et enregistrer les changements. Une nouvelle signature remplace la signature actuelle.', 'Puoi modificarla e salvare le modifiche. Una nuova firma sostituisce quella attuale.')}`
+                    : `${_atTr('Existing attendance', 'Présence existante', 'Presenza esistente')} (${signedLabel}). ${_atTr('Read only: only an administrator can edit it.', 'Lecture seule : seul un administrateur peut la modifier.', 'Sola lettura: solo un amministratore può modificarla.')}`;
             }
             setEmployeeFormReadOnly(!canEditExistingAttendance);
-            saveSignatureButton.textContent = _atTr('Update attendance', 'Mettre à jour la présence');
+            saveSignatureButton.textContent = _atTr('Update attendance', 'Mettre à jour la présence', 'Aggiorna presenza');
         } else {
             statusSelect.value = 'present';
             if (employeeCheckInField) employeeCheckInField.value = normalizeTimeInputValue(assignment?.start_time || '');
@@ -411,8 +412,8 @@
             let marker = '';
             if (record) {
                 marker = Number(record.digital_signature_id || 0) > 0
-                    ? ` • ${_atTr('signed', 'signée')}`
-                    : ` • ${_atTr('recorded, unsigned', 'enregistrée, non signée')}`;
+                    ? ` • ${_atTr('signed', 'signée', 'firmata')}`
+                    : ` • ${_atTr('recorded, unsigned', 'enregistrée, non signée', 'registrata, non firmata')}`;
             }
             option.textContent = `${assignment.work_date || ''} - ${assignment.shift_name || 'Shift'} (${assignment.status || 'assigned'})${marker}`;
             assignmentSelect.appendChild(option);
@@ -473,8 +474,8 @@
         if (recordSignatureStateNode) {
             const hasExistingSignature = Number(record.digital_signature_id || 0) > 0;
             recordSignatureStateNode.textContent = hasExistingSignature
-                ? `${_atTr('Signature status', 'Etat signature')}: ${_atTr('present', 'presente')}`
-                : `${_atTr('Signature status', 'Etat signature')}: ${_atTr('missing', 'manquante')}`;
+                ? `${_atTr('Signature status', 'Etat signature', 'Stato firma')}: ${_atTr('present', 'presente', 'presente')}`
+                : `${_atTr('Signature status', 'Etat signature', 'Stato firma')}: ${_atTr('missing', 'manquante', 'mancante')}`;
         }
         const recordMonthSelect = recordModal.querySelector('[data-attendance-record-hours-month-select]');
         const recordUserId = Number(record.user_id || 0);
@@ -620,7 +621,7 @@
 
         const isEditingExisting = editingAttendanceId > 0;
         if (isEditingExisting && !canEditExistingAttendance) {
-            notifyError(_atTr('Only an administrator can edit an existing attendance.', 'Seul un administrateur peut modifier une présence existante.'));
+            notifyError(_atTr('Only an administrator can edit an existing attendance.', 'Seul un administrateur peut modifier une présence existante.', 'Solo un amministratore può modificare una presenza esistente.'));
             return;
         }
 
@@ -665,7 +666,7 @@
             }
 
             notifySuccess(isEditingExisting
-                ? _atTr('Attendance updated successfully.', 'Présence mise à jour avec succès.')
+                ? _atTr('Attendance updated successfully.', 'Présence mise à jour avec succès.', 'Presenza aggiornata con successo.')
                 : 'Attendance recorded with digital signature.');
             globalThis.setTimeout(() => globalThis.location.reload(), 450);
         } catch (error) {
@@ -692,7 +693,7 @@
 
     async function cancelAttendance(attendanceId) {
         if (!attendanceId) return;
-        const canProceed = await confirmAction(_atTr('Cancel this attendance registration?', 'Annuler cet enregistrement de présence ?'), _atTr('Confirm cancellation', "Confirmer l'annulation"));
+        const canProceed = await confirmAction(_atTr('Cancel this attendance registration?', 'Annuler cet enregistrement de présence ?', 'Annullare questa registrazione di presenza?'), _atTr('Confirm cancellation', "Confirmer l'annulation", "Conferma l'annullamento"));
         if (!canProceed) return;
         const response = await AppAPI.postJSON(apiUrl, {
             action: 'cancel_attendance',

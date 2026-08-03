@@ -76,8 +76,10 @@ $pageTitle = match ($role) {
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';
 
-$isSuperAdminDirectoryView = $role === 'super_admin' && strtolower(trim((string) ($_GET['view'] ?? ''))) === 'directory';
-$isSuperAdminScopedToCompany = $role === 'super_admin' && !$isSuperAdminDirectoryView && (int) ($_GET['settings_company_id'] ?? 0) > 0;
+$requestedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
+$requestedView = strtolower(trim((string) ($_GET['view'] ?? '')));
+$isSuperAdminDirectoryView = $role === 'super_admin' && $requestedCompanyId <= 0 && ($requestedView === '' || $requestedView === 'directory');
+$isSuperAdminScopedToCompany = $role === 'super_admin' && !$isSuperAdminDirectoryView && $requestedCompanyId > 0;
 
 $dashboardCalendarToday = date('Y-m-d');
 $dashboardCalendarMode = (in_array($role, ['admin', 'department_manager'], true) || $isSuperAdminScopedToCompany) ? 'week' : 'month';
@@ -137,9 +139,15 @@ $resolvePreferredShiftId = static function (array $shiftRows, ?int $preferredDep
 
 $plannerCompanyId = null;
 if ($role === 'super_admin') {
-    $requestedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
     $allCompanies = $companyModel->all();
-    if (!empty($allCompanies)) {
+    $dashboardPlannerData['companies'] = $allCompanies;
+    $modalCompanies = $allCompanies;
+} else {
+    $allCompanies = [];
+}
+
+if ($role === 'super_admin') {
+    if (!empty($allCompanies) && !$isSuperAdminDirectoryView) {
         if ($requestedCompanyId > 0) {
             foreach ($allCompanies as $companyRow) {
                 if ((int) ($companyRow['id'] ?? 0) === $requestedCompanyId) {
@@ -233,7 +241,6 @@ if ($role === 'super_admin') {
 
         $dashboardPlannerData['users'] = $userRows;
         $dashboardPlannerData['shifts'] = $shiftRows;
-        $dashboardPlannerData['companies'] = $allCompanies;
         $dashboardPlannerData['company'] = [
             'id' => $plannerCompanyId,
             'name' => $companyName,
@@ -634,12 +641,51 @@ $modalDocuments = [];
 $modalDocumentRecipients = [];
 $modalDocumentRequests = [];
 $modalOpenShiftChoices = [];
+$recentConnections = [];
 
 
 if ($role === 'super_admin') {
+    try {
+        $activeConnectionsStmt = $pdo->query(
+            'SELECT COUNT(DISTINCT uc.user_id)
+             FROM user_connections uc
+             INNER JOIN users u ON u.id = uc.user_id
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE uc.logged_out_at IS NULL
+               AND uc.last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)'
+        );
+        $stats['connections'] = (int) ($activeConnectionsStmt->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        $stats['connections'] = 0;
+    }
+
     $moduleRows['company_directory'] = $companyModel->directoryWithAdminsAndDepartments();
     $moduleRows['departments'] = $departmentModel->allWithCompany();
-    $modalCompanies = $companyModel->all();
+    try {
+        $recentConnectionsStmt = $pdo->query(
+            'SELECT uc.user_id,
+                    uc.session_id,
+                    uc.ip_address,
+                    uc.user_agent,
+                    uc.logged_in_at,
+                    uc.last_seen_at,
+                    uc.logged_out_at,
+                    CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                    u.role,
+                    c.id AS company_id,
+                    c.name AS company_name,
+                    d.name AS department_name
+             FROM user_connections uc
+             INNER JOIN users u ON u.id = uc.user_id
+             LEFT JOIN departments d ON d.id = u.department_id
+             LEFT JOIN companies c ON c.id = d.company_id
+             ORDER BY COALESCE(uc.logged_out_at, uc.last_seen_at, uc.logged_in_at) DESC, uc.id DESC
+             LIMIT 12'
+        );
+        $recentConnections = $recentConnectionsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $recentConnections = [];
+    }
     $modalUsers = $userModel->allWithRelations();
     $modalDepartments = $departmentModel->allWithCompany();
     $modalDocuments = $pdo->query(
@@ -830,4 +876,5 @@ $dashboardModalDocuments = $modalDocuments;
 $dashboardModalDocumentRecipients = $modalDocumentRecipients;
 $dashboardModalDocumentRequests = $modalDocumentRequests;
 $dashboardModalOpenShiftChoices = $modalOpenShiftChoices;
+$moduleRows['recent_connections'] = $recentConnections;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);

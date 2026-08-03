@@ -11,14 +11,15 @@
   var feedback = window.DashboardFeedback;
   var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   var isFr = locale.indexOf('fr') === 0;
+  var isIt = locale.indexOf('it') === 0;
   var iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
-  function tr(enText, frText) {
-    return isFr ? frText : enText;
+  function tr(enText, frText, itText) {
+    return isFr ? frText : (isIt && itText ? itText : enText);
   }
 
   function notifyError(message) {
     if (feedback && typeof feedback.error === 'function') {
-      feedback.error(tr('Oops!', 'Erreur'), message);
+      feedback.error(tr('Oops!', 'Erreur', 'Errore'), message);
       return;
     }
     console.error(message);
@@ -26,7 +27,7 @@
 
   function notifySuccess(message) {
     if (feedback && typeof feedback.success === 'function') {
-      feedback.success(tr('Done', 'Termine'), message);
+      feedback.success(tr('Done', 'Termine', 'Fatto'), message);
       return;
     }
   }
@@ -409,11 +410,11 @@
       var vacationIconPath = resolveTemplateIconPath('vacation', 'parasol.svg');
       var sickIconPath = resolveTemplateIconPath('sick', 'stethoscope.svg');
       badgeActionMenu.innerHTML = [
-        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="rest"><img class="calendar-badge-actions-icon" src="' + restIconPath + '" alt="" aria-hidden="true"> ' + tr('Rest', 'Repos') + '</button>',
-        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="vacation"><img class="calendar-badge-actions-icon" src="' + vacationIconPath + '" alt="" aria-hidden="true"> ' + tr('Vacation', 'Vacances') + '</button>',
-        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="sick"><img class="calendar-badge-actions-icon" src="' + sickIconPath + '" alt="" aria-hidden="true"> ' + tr('Sick', 'Maladie') + '</button>',
-        '<button type="button" class="calendar-badge-actions-btn is-danger" data-calendar-badge-action="unassign"><img class="calendar-badge-actions-icon" src="' + iconsBase + 'x.svg" alt="" aria-hidden="true"> ' + tr('Unassign', 'Desassigner') + '</button>',
-        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="cancel">' + tr('Cancel', 'Annuler') + '</button>'
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="rest"><img class="calendar-badge-actions-icon" src="' + restIconPath + '" alt="" aria-hidden="true"> ' + tr('Rest', 'Repos', 'Riposo') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="vacation"><img class="calendar-badge-actions-icon" src="' + vacationIconPath + '" alt="" aria-hidden="true"> ' + tr('Vacation', 'Vacances', 'Vacanze') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="sick"><img class="calendar-badge-actions-icon" src="' + sickIconPath + '" alt="" aria-hidden="true"> ' + tr('Sick', 'Maladie', 'Malattia') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn is-danger" data-calendar-badge-action="unassign"><img class="calendar-badge-actions-icon" src="' + iconsBase + 'x.svg" alt="" aria-hidden="true"> ' + tr('Unassign', 'Desassigner', 'Disassegna') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="cancel">' + tr('Cancel', 'Annuler', 'Annulla') + '</button>'
       ].join('');
     }
 
@@ -536,9 +537,9 @@
         (async function () {
           try {
             await unassignAssignment(assignmentId);
-            notifySuccess(tr('Shift unassigned successfully.', 'Poste desassigne avec succes.'));
+            notifySuccess(tr('Shift unassigned successfully.', 'Poste desassigne avec succes.', 'Turno disassegnato con successo.'));
           } catch (error) {
-            notifyError((error && error.message) || tr('Unable to unassign shift.', 'Impossible de desassigner le poste.'));
+            notifyError((error && error.message) || tr('Unable to unassign shift.', 'Impossible de desassigner le poste.', 'Impossibile disassegnare il turno.'));
           }
         })();
         return;
@@ -551,7 +552,7 @@
 
       var absenceShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId(action) || 0) : 0;
       if (!absenceShiftId) {
-        notifyError(tr('Absence template is not available.', 'Le modele d absence n est pas disponible.'));
+        notifyError(tr('Absence template is not available.', 'Le modele d absence n est pas disponible.', 'Il modello di assenza non è disponibile.'));
         return;
       }
 
@@ -564,9 +565,9 @@
             status: 'assigned',
             force_override: true,
           });
-          notifySuccess(tr('Absence assigned successfully.', 'Absence assignee avec succes.'));
+          notifySuccess(tr('Absence assigned successfully.', 'Absence assignee avec succes.', 'Assenza assegnata con successo.'));
         } catch (error) {
-          notifyError((error && error.message) || tr('Unable to assign absence.', 'Impossible d assigner l absence.'));
+          notifyError((error && error.message) || tr('Unable to assign absence.', 'Impossible d assigner l absence.', 'Impossibile assegnare l\'assenza.'));
         }
       })();
     }

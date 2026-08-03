@@ -12,14 +12,15 @@
   var feedback = window.DashboardFeedback || null;
   var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   var isFr = locale.indexOf('fr') === 0;
+  var isIt = locale.indexOf('it') === 0;
   var iconsBase = String(config.iconsBase || '/assets/icons/');
-  function tr(enText, frText) {
-    return isFr ? frText : enText;
+  function tr(enText, frText, itText) {
+    return isFr ? frText : (isIt && itText ? itText : enText);
   }
 
   function notifySuccess(message) {
     if (feedback && typeof feedback.success === 'function') {
-      feedback.success('Done', message);
+      feedback.success(tr('Done', 'Termine', 'Fatto'), message);
       return;
     }
     console.log(message);
@@ -27,7 +28,7 @@
 
   function notifyError(message) {
     if (feedback && typeof feedback.error === 'function') {
-      feedback.error('Oops!', message);
+      feedback.error(tr('Oops!', 'Oups !', 'Ops!'), message);
       return;
     }
     console.error(message);
@@ -65,7 +66,7 @@
   }
 
   function monthLabel(dateObj) {
-    return new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' }).format(dateObj);
+    return new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US'), { month: 'long', year: 'numeric' }).format(dateObj);
   }
 
   function dateTimeLabel(dateObj) {
@@ -80,7 +81,7 @@
   }
 
   function weekdayShort(dateObj) {
-    return new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' }).format(dateObj);
+    return new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US'), { weekday: 'short' }).format(dateObj);
   }
 
   function getRuntime() {
@@ -312,7 +313,7 @@
           valueHtml: iconPath
             ? ('<img class="dashboard-print-cell-icon" src="' + escapeHtml(iconPath) + '" alt="" aria-hidden="true">')
             : '',
-          exportValue: cellValue || (first.kind === 'work' ? tr('Work', 'Travail') : tr('No work', 'Sans travail')),
+          exportValue: cellValue || (first.kind === 'work' ? tr('Work', 'Travail', 'Lavoro') : tr('No work', 'Sans travail', 'Senza lavoro')),
           className: (first.kind === 'work' ? 'is-work' : 'is-no-work') + ' is-icon-only',
           details: '',
           style: '--print-shift-color:' + first.shiftColor + ';',
@@ -383,13 +384,13 @@
       })
       .map(function (row) {
         var userId = Number(row && row.user_id || 0);
-        var fullName = userMap[userId] || String(row && row.user_name || '').trim() || (tr('Employee', 'Employe') + ' #' + userId);
+        var fullName = userMap[userId] || String(row && row.user_name || '').trim() || (tr('Employee', 'Employe', 'Dipendente') + ' #' + userId);
         var signatureDataUri = normalizeSignatureDataUri(row && row.signature_data || '');
         return {
           workDate: String(row && row.work_date || ''),
           initials: employeeInitialsFromName(fullName),
           fullName: fullName,
-          shiftName: String(row && row.shift_name || tr('Shift', 'Poste')),
+          shiftName: String(row && row.shift_name || tr('Shift', 'Poste', 'Turno')),
           scheduled: (String(row && row.shift_start_time || '--:--').slice(0, 5) + ' - ' + String(row && row.shift_end_time || '--:--').slice(0, 5)),
           checkIn: String(row && row.check_in_time || '').slice(0, 5) || '--:--',
           checkOut: String(row && row.check_out_time || '').slice(0, 5) || '--:--',
@@ -408,8 +409,8 @@
   function renderAttendanceTable(section, rows) {
     var bodyRows = rows.map(function (row) {
       var signatureHtml = row.signatureData
-        ? ('<img class="dashboard-print-signature-image" src="' + escapeHtml(row.signatureData) + '" alt="' + escapeHtml(tr('Digital signature of ', 'Signature numerique de ') + row.fullName) + '">')
-        : (row.signed ? ('<span class="dashboard-print-signature-missing">' + escapeHtml(tr('Signed', 'Signe')) + '</span>') : '&nbsp;');
+        ? ('<img class="dashboard-print-signature-image" src="' + escapeHtml(row.signatureData) + '" alt="' + escapeHtml(tr('Digital signature of ', 'Signature numerique de ', 'Firma digitale di ') + row.fullName) + '">')
+        : (row.signed ? ('<span class="dashboard-print-signature-missing">' + escapeHtml(tr('Signed', 'Signe', 'Firmato')) + '</span>') : '&nbsp;');
       return '' +
         '<tr>' +
           '<td>' + escapeHtml(row.workDate) + '</td>' +
@@ -424,24 +425,24 @@
     }).join('');
 
     if (!bodyRows) {
-      bodyRows = '<tr><td colspan="8">' + escapeHtml(tr('No attendance records found for this month.', 'Aucun enregistrement de presence trouve pour ce mois.')) + '</td></tr>';
+      bodyRows = '<tr><td colspan="8">' + escapeHtml(tr('No attendance records found for this month.', 'Aucun enregistrement de presence trouve pour ce mois.', 'Nessuna registrazione presenza trovata per questo mese.')) + '</td></tr>';
     }
 
     return '' +
       '<section class="dashboard-print-page dashboard-print-attendance-page">' +
-        '<h3>' + escapeHtml(section.monthLabel + ' ' + tr('attendance and signatures', 'presences et signatures')) + '</h3>' +
+        '<h3>' + escapeHtml(section.monthLabel + ' ' + tr('attendance and signatures', 'presences et signatures', 'presenze e firme')) + '</h3>' +
         '<div class="dashboard-print-grid-wrap">' +
           '<table class="dashboard-print-grid dashboard-print-attendance-grid">' +
             '<thead>' +
               '<tr>' +
-                '<th>' + tr('Date', 'Date') + '</th>' +
-                '<th>' + tr('Emp', 'Emp') + '</th>' +
-                '<th>' + tr('Shift', 'Poste') + '</th>' +
-                '<th>' + tr('Planned time', 'Horaire prevu') + '</th>' +
-                '<th>' + tr('Check-in', 'Entree') + '</th>' +
-                '<th>' + tr('Check-out', 'Sortie') + '</th>' +
-                '<th>' + tr('Status', 'Statut') + '</th>' +
-                '<th>' + tr('Signature', 'Signature') + '</th>' +
+                '<th>' + tr('Date', 'Date', 'Data') + '</th>' +
+                '<th>' + tr('Emp', 'Emp', 'Dip.') + '</th>' +
+                '<th>' + tr('Shift', 'Poste', 'Turno') + '</th>' +
+                '<th>' + tr('Planned time', 'Horaire prevu', 'Orario previsto') + '</th>' +
+                '<th>' + tr('Check-in', 'Entree', 'Entrata') + '</th>' +
+                '<th>' + tr('Check-out', 'Sortie', 'Uscita') + '</th>' +
+                '<th>' + tr('Status', 'Statut', 'Stato') + '</th>' +
+                '<th>' + tr('Signature', 'Signature', 'Firma') + '</th>' +
               '</tr>' +
             '</thead>' +
             '<tbody>' + bodyRows + '</tbody>' +
@@ -453,12 +454,12 @@
   function buildEmployeeLegend(section) {
     var rows = Array.isArray(section && section.rows) ? section.rows : [];
     if (!rows.length) {
-      return '<div class="dashboard-print-legend-empty">' + escapeHtml(tr('No employees in selected department.', 'Aucun employe dans le departement selectionne.')) + '</div>';
+      return '<div class="dashboard-print-legend-empty">' + escapeHtml(tr('No employees in selected department.', 'Aucun employe dans le departement selectionne.', 'Nessun dipendente nel dipartimento selezionato.')) + '</div>';
     }
     return '<div class="dashboard-print-legend-list dashboard-print-employee-legend-list">' + rows.map(function (row) {
       var monthSummary = getUserMonthSummary(row.userId, section && section.monthDate ? section.monthDate : null);
       var hoursSummary = monthSummary
-        ? ('<small>' + escapeHtml(tr('Hours', 'Heures')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</small>')
+        ? ('<small>' + escapeHtml(tr('Hours', 'Heures', 'Ore')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</small>')
         : '';
       return '<span class="dashboard-print-legend-item dashboard-print-employee-legend-item"><strong>' +
         escapeHtml(row.employeeInitials || '--') +
@@ -469,8 +470,8 @@
   function buildFooterMeta(generatedAt, generatedBy) {
     return '' +
       '<div class="dashboard-print-sheet-footer-meta">' +
-        '<strong>' + tr('Created:', 'Cree le :') + '</strong> ' + escapeHtml(dateTimeLabel(generatedAt || new Date())) +
-        ' <span aria-hidden="true">•</span> <strong>' + tr('By:', 'Par :') + '</strong> ' + escapeHtml(String(generatedBy || tr('Admin', 'Admin'))) +
+        '<strong>' + tr('Created:', 'Cree le :', 'Creato il:') + '</strong> ' + escapeHtml(dateTimeLabel(generatedAt || new Date())) +
+        ' <span aria-hidden="true">•</span> <strong>' + tr('By:', 'Par :', 'Da:') + '</strong> ' + escapeHtml(String(generatedBy || tr('Admin', 'Admin', 'Admin'))) +
       '</div>';
   }
 
@@ -479,7 +480,7 @@
       ? activeDepartment.shifts
       : [];
     if (!shifts.length) {
-      return '<div class="dashboard-print-legend-empty">' + escapeHtml(tr('No shifts configured for this department.', 'Aucun poste configure pour ce departement.')) + '</div>';
+      return '<div class="dashboard-print-legend-empty">' + escapeHtml(tr('No shifts configured for this department.', 'Aucun poste configure pour ce departement.', 'Nessun turno configurato per questo dipartimento.')) + '</div>';
     }
 
     var ordered = shifts.slice().sort(function (left, right) {
@@ -494,7 +495,7 @@
     return '<div class="dashboard-print-legend-list">' + ordered.map(function (shift) {
       var color = normalizeShiftColor(shift && shift.color || '');
       var icon = String(shift && shift.icon || '').trim();
-      var name = String(shift && shift.name || tr('Shift', 'Poste')).trim();
+      var name = String(shift && shift.name || tr('Shift', 'Poste', 'Turno')).trim();
       var start = String(shift && shift.start_time || '--:--').slice(0, 5);
       var end = String(shift && shift.end_time || '--:--').slice(0, 5);
       var iconHtml = '';
@@ -518,10 +519,10 @@
 
     if (String(mode || 'planning') === 'attendance') {
       var attendanceTableHtml = renderAttendanceTable(sectionState.section, sectionState.attendanceRows || []);
-      var attendanceLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Employee initials legend', 'Legende des initiales employes') + '</h4>' + buildEmployeeLegend(sectionState.section) + '</section>';
+      var attendanceLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Employee initials legend', 'Legende des initiales employes', 'Legenda iniziali dipendenti') + '</h4>' + buildEmployeeLegend(sectionState.section) + '</section>';
       return '' +
         '<section class="dashboard-print-page dashboard-print-attendance-page">' +
-          '<div class="dashboard-print-department-heading">' + escapeHtml(String(sectionState.department && sectionState.department.name || tr('Department', 'Departement'))) + '</div>' +
+          '<div class="dashboard-print-department-heading">' + escapeHtml(String(sectionState.department && sectionState.department.name || tr('Department', 'Departement', 'Dipartimento'))) + '</div>' +
           attendanceTableHtml +
           '<div class="dashboard-print-sheet-footer">' +
             '<div class="dashboard-print-sheet-footer-left">' + attendanceLegendHtml + '</div>' +
@@ -529,11 +530,11 @@
         '</section>';
     }
 
-    var shiftLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Shift legend', 'Legende des postes') + '</h4>' + buildShiftLegend(sectionState.department) + '</section>';
-    var employeeLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Employee initials legend', 'Legende des initiales employes') + '</h4>' + buildEmployeeLegend(sectionState.section) + '</section>';
+    var shiftLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Shift legend', 'Legende des postes', 'Legenda turni') + '</h4>' + buildShiftLegend(sectionState.department) + '</section>';
+    var employeeLegendHtml = '<section class="dashboard-print-shifts-legend"><h4>' + tr('Employee initials legend', 'Legende des initiales employes', 'Legenda iniziali dipendenti') + '</h4>' + buildEmployeeLegend(sectionState.section) + '</section>';
     return '' +
       '<section class="dashboard-print-page">' +
-        '<div class="dashboard-print-department-heading">' + escapeHtml(String(sectionState.department && sectionState.department.name || tr('Department', 'Departement'))) + '</div>' +
+        '<div class="dashboard-print-department-heading">' + escapeHtml(String(sectionState.department && sectionState.department.name || tr('Department', 'Departement', 'Dipartimento'))) + '</div>' +
         renderMonthTable(sectionState.section) +
         '<div class="dashboard-print-sheet-footer">' +
           '<div class="dashboard-print-sheet-footer-left">' + shiftLegendHtml + employeeLegendHtml + '</div>' +
@@ -551,12 +552,12 @@
 
   function buildMonthCsv(section, meta) {
     var lines = [];
-    lines.push(tr('Planning ', 'Planning ') + section.monthLabel);
-    lines.push(tr('Department', 'Departement') + ',' + toCsvValue(meta.departmentName || ''));
-    lines.push(tr('Generated by', 'Genere par') + ',' + toCsvValue(meta.generatedBy || tr('Admin', 'Admin')));
-    lines.push(tr('Generated at', 'Genere le') + ',' + toCsvValue(meta.generatedAt || ''));
+    lines.push(tr('Planning ', 'Planning ', 'Planning ') + section.monthLabel);
+    lines.push(tr('Department', 'Departement', 'Dipartimento') + ',' + toCsvValue(meta.departmentName || ''));
+    lines.push(tr('Generated by', 'Genere par', 'Generato da') + ',' + toCsvValue(meta.generatedBy || tr('Admin', 'Admin', 'Admin')));
+    lines.push(tr('Generated at', 'Genere le', 'Generato il') + ',' + toCsvValue(meta.generatedAt || ''));
     lines.push('');
-    var headers = [tr('Employee', 'Employe')].concat(section.days.map(function (dayInfo) { return dayInfo.key; }));
+    var headers = [tr('Employee', 'Employe', 'Dipendente')].concat(section.days.map(function (dayInfo) { return dayInfo.key; }));
     lines.push(headers.map(toCsvValue).join(','));
 
     section.rows.forEach(function (row) {
@@ -582,21 +583,21 @@
       }
 
       if (String(renderState.mode || 'planning') === 'attendance') {
-        parts.push(tr('Attendance and signatures ', 'Presences et signatures ') + sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || tr('Department', 'Departement')));
-        parts.push(tr('Department', 'Departement') + ',' + toCsvValue(String(sectionState.department.name || '')));
-        parts.push(tr('Generated by', 'Genere par') + ',' + toCsvValue(String(renderState.generatedBy || tr('Admin', 'Admin'))));
-        parts.push(tr('Generated at', 'Genere le') + ',' + toCsvValue(dateTimeLabel(renderState.generatedAt || new Date())));
+        parts.push(tr('Attendance and signatures ', 'Presences et signatures ', 'Presenze e firme ') + sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || tr('Department', 'Departement', 'Dipartimento')));
+        parts.push(tr('Department', 'Departement', 'Dipartimento') + ',' + toCsvValue(String(sectionState.department.name || '')));
+        parts.push(tr('Generated by', 'Genere par', 'Generato da') + ',' + toCsvValue(String(renderState.generatedBy || tr('Admin', 'Admin', 'Admin'))));
+        parts.push(tr('Generated at', 'Genere le', 'Generato il') + ',' + toCsvValue(dateTimeLabel(renderState.generatedAt || new Date())));
         parts.push('');
         parts.push([
-          tr('Date', 'Date'),
-          tr('Employee initials', 'Initiales employe'),
-          tr('Employee name', 'Nom employe'),
-          tr('Shift', 'Poste'),
-          tr('Planned time', 'Horaire prevu'),
-          tr('Check-in', 'Entree'),
-          tr('Check-out', 'Sortie'),
-          tr('Status', 'Statut'),
-          tr('Signed', 'Signe'),
+          tr('Date', 'Date', 'Data'),
+          tr('Employee initials', 'Initiales employe', 'Iniziali dipendente'),
+          tr('Employee name', 'Nom employe', 'Nome dipendente'),
+          tr('Shift', 'Poste', 'Turno'),
+          tr('Planned time', 'Horaire prevu', 'Orario previsto'),
+          tr('Check-in', 'Entree', 'Entrata'),
+          tr('Check-out', 'Sortie', 'Uscita'),
+          tr('Status', 'Statut', 'Stato'),
+          tr('Signed', 'Signe', 'Firmato'),
         ].map(toCsvValue).join(','));
         (sectionState.attendanceRows || []).forEach(function (row) {
           parts.push([
@@ -608,16 +609,16 @@
             row.checkIn,
             row.checkOut,
             row.status,
-            row.signed ? tr('yes', 'oui') : tr('no', 'non'),
+            row.signed ? tr('yes', 'oui', 'sì') : tr('no', 'non', 'no'),
           ].map(toCsvValue).join(','));
         });
       } else {
-        parts.push(tr('Planning ', 'Planning ') + sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || tr('Department', 'Departement')));
-        parts.push(tr('Department', 'Departement') + ',' + toCsvValue(String(sectionState.department.name || '')));
-        parts.push(tr('Generated by', 'Genere par') + ',' + toCsvValue(String(renderState.generatedBy || tr('Admin', 'Admin'))));
-        parts.push(tr('Generated at', 'Genere le') + ',' + toCsvValue(dateTimeLabel(renderState.generatedAt || new Date())));
+        parts.push(tr('Planning ', 'Planning ', 'Planning ') + sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || tr('Department', 'Departement', 'Dipartimento')));
+        parts.push(tr('Department', 'Departement', 'Dipartimento') + ',' + toCsvValue(String(sectionState.department.name || '')));
+        parts.push(tr('Generated by', 'Genere par', 'Generato da') + ',' + toCsvValue(String(renderState.generatedBy || tr('Admin', 'Admin', 'Admin'))));
+        parts.push(tr('Generated at', 'Genere le', 'Generato il') + ',' + toCsvValue(dateTimeLabel(renderState.generatedAt || new Date())));
         parts.push('');
-        parts.push([tr('Employee', 'Employe')].concat(sectionState.section.days.map(function (dayInfo) { return dayInfo.key; })).map(toCsvValue).join(','));
+        parts.push([tr('Employee', 'Employe', 'Dipendente')].concat(sectionState.section.days.map(function (dayInfo) { return dayInfo.key; })).map(toCsvValue).join(','));
         sectionState.section.rows.forEach(function (row) {
           var values = [row.employeeName].concat(row.cells.map(function (cell) {
             return cell.exportValue || cell.value || '';
@@ -645,11 +646,11 @@
     return '' +
       '<html><head><meta charset="UTF-8"></head><body>' +
         '<table border="1" cellspacing="0" cellpadding="4">' +
-          '<tr><th colspan="' + String(section.days.length + 1) + '">' + tr('Planning ', 'Planning ') + escapeHtml(section.monthLabel) + '</th></tr>' +
-          '<tr><th>' + tr('Department', 'Departement') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.departmentName || '') + '</td></tr>' +
-          '<tr><th>' + tr('Generated by', 'Genere par') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.generatedBy || tr('Admin', 'Admin')) + '</td></tr>' +
-          '<tr><th>' + tr('Generated at', 'Genere le') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.generatedAt || '') + '</td></tr>' +
-          '<tr><th>' + tr('Employee', 'Employe') + '</th>' + headerCells + '</tr>' +
+          '<tr><th colspan="' + String(section.days.length + 1) + '">' + tr('Planning ', 'Planning ', 'Planning ') + escapeHtml(section.monthLabel) + '</th></tr>' +
+          '<tr><th>' + tr('Department', 'Departement', 'Dipartimento') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.departmentName || '') + '</td></tr>' +
+          '<tr><th>' + tr('Generated by', 'Genere par', 'Generato da') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.generatedBy || tr('Admin', 'Admin', 'Admin')) + '</td></tr>' +
+          '<tr><th>' + tr('Generated at', 'Genere le', 'Generato il') + '</th><td colspan="' + String(section.days.length) + '">' + escapeHtml(meta.generatedAt || '') + '</td></tr>' +
+          '<tr><th>' + tr('Employee', 'Employe', 'Dipendente') + '</th>' + headerCells + '</tr>' +
           bodyRows +
         '</table>' +
       '</body></html>';
@@ -673,16 +674,16 @@
             '<td>' + escapeHtml(row.checkIn) + '</td>' +
             '<td>' + escapeHtml(row.checkOut) + '</td>' +
             '<td>' + escapeHtml(row.status) + '</td>' +
-            '<td>' + (row.signatureData ? '<img class="dashboard-print-signature-image" src="' + escapeHtml(row.signatureData) + '" alt="">' : (row.signed ? tr('Signed', 'Signe') : '&nbsp;')) + '</td>' +
+            '<td>' + (row.signatureData ? '<img class="dashboard-print-signature-image" src="' + escapeHtml(row.signatureData) + '" alt="">' : (row.signed ? tr('Signed', 'Signe', 'Firmato') : '&nbsp;')) + '</td>' +
           '</tr>';
         }).join('');
         if (!attendanceBodyRows) {
-          attendanceBodyRows = '<tr><td colspan="9">' + escapeHtml(tr('No attendance records found for this month.', 'Aucun enregistrement de presence trouve pour ce mois.')) + '</td></tr>';
+          attendanceBodyRows = '<tr><td colspan="9">' + escapeHtml(tr('No attendance records found for this month.', 'Aucun enregistrement de presence trouve pour ce mois.', 'Nessuna registrazione presenza trovata per questo mese.')) + '</td></tr>';
         }
         return '' +
           '<table border="1" cellspacing="0" cellpadding="4">' +
-            '<tr><th colspan="9">' + tr('Attendance and signatures ', 'Presences et signatures ') + escapeHtml(sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || '')) + '</th></tr>' +
-            '<tr><th>' + tr('Date', 'Date') + '</th><th>' + tr('Emp', 'Emp') + '</th><th>' + tr('Employee name', 'Nom employe') + '</th><th>' + tr('Shift', 'Poste') + '</th><th>' + tr('Planned time', 'Horaire prevu') + '</th><th>' + tr('Check-in', 'Entree') + '</th><th>' + tr('Check-out', 'Sortie') + '</th><th>' + tr('Status', 'Statut') + '</th><th>' + tr('Signature', 'Signature') + '</th></tr>' +
+            '<tr><th colspan="9">' + tr('Attendance and signatures ', 'Presences et signatures ', 'Presenze e firme ') + escapeHtml(sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || '')) + '</th></tr>' +
+            '<tr><th>' + tr('Date', 'Date', 'Data') + '</th><th>' + tr('Emp', 'Emp', 'Dip.') + '</th><th>' + tr('Employee name', 'Nom employe', 'Nome dipendente') + '</th><th>' + tr('Shift', 'Poste', 'Turno') + '</th><th>' + tr('Planned time', 'Horaire prevu', 'Orario previsto') + '</th><th>' + tr('Check-in', 'Entree', 'Entrata') + '</th><th>' + tr('Check-out', 'Sortie', 'Uscita') + '</th><th>' + tr('Status', 'Statut', 'Stato') + '</th><th>' + tr('Signature', 'Signature', 'Firma') + '</th></tr>' +
             attendanceBodyRows +
           '</table>';
       }
@@ -697,11 +698,11 @@
 
       return '' +
         '<table border="1" cellspacing="0" cellpadding="4">' +
-          '<tr><th colspan="' + String(sectionState.section.days.length + 1) + '">' + tr('Planning ', 'Planning ') + escapeHtml(sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || '')) + '</th></tr>' +
-          '<tr><th>' + tr('Department', 'Departement') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(String(sectionState.department.name || '')) + '</td></tr>' +
-          '<tr><th>' + tr('Generated by', 'Genere par') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(String(renderState.generatedBy || tr('Admin', 'Admin'))) + '</td></tr>' +
-          '<tr><th>' + tr('Generated at', 'Genere le') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(dateTimeLabel(renderState.generatedAt || new Date())) + '</td></tr>' +
-          '<tr><th>' + tr('Employee', 'Employe') + '</th>' + headerCells + '</tr>' +
+          '<tr><th colspan="' + String(sectionState.section.days.length + 1) + '">' + tr('Planning ', 'Planning ', 'Planning ') + escapeHtml(sectionState.section.monthLabel + ' - ' + String(sectionState.department.name || '')) + '</th></tr>' +
+          '<tr><th>' + tr('Department', 'Departement', 'Dipartimento') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(String(sectionState.department.name || '')) + '</td></tr>' +
+          '<tr><th>' + tr('Generated by', 'Genere par', 'Generato da') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(String(renderState.generatedBy || tr('Admin', 'Admin', 'Admin'))) + '</td></tr>' +
+          '<tr><th>' + tr('Generated at', 'Genere le', 'Generato il') + '</th><td colspan="' + String(sectionState.section.days.length) + '">' + escapeHtml(dateTimeLabel(renderState.generatedAt || new Date())) + '</td></tr>' +
+          '<tr><th>' + tr('Employee', 'Employe', 'Dipendente') + '</th>' + headerCells + '</tr>' +
           bodyRows +
         '</table>';
     }).join('<hr>');
@@ -802,13 +803,15 @@
       }
       if (previewButton) {
         previewButton.classList.toggle('is-active', previewEnabled);
-        previewButton.textContent = previewEnabled ? 'Hide Preview' : 'Preview A4';
+        previewButton.textContent = previewEnabled
+          ? tr('Hide Preview', 'Masquer l apercu', 'Nascondi anteprima')
+          : tr('Preview A4', 'Apercu A4', 'Anteprima A4');
       }
       if (previewEnabled) {
         var mode = String((documentTypeSelect && documentTypeSelect.value) || 'planning');
         setFeedback(mode === 'attendance'
-          ? tr('A4 preview enabled for signatures and attendance sheet.', 'Apercu A4 active pour les signatures et la feuille de presence.')
-          : tr('A4 preview enabled. Planning is scaled to fit one A4 page.', 'Apercu A4 active. Le planning est adapte sur une seule page A4.'), false);
+          ? tr('A4 preview enabled for signatures and attendance sheet.', 'Apercu A4 active pour les signatures et la feuille de presence.', 'Anteprima A4 attivata per firme e foglio presenze.')
+          : tr('A4 preview enabled. Planning is scaled to fit one A4 page.', 'Apercu A4 active. Le planning est adapte sur une seule page A4.', 'Anteprima A4 attivata. Il planning è adattato a una sola pagina A4.'), false);
       }
     }
 
@@ -816,7 +819,7 @@
       var selectedDepartments = getSelectedPrintDepartments();
       if (!selectedDepartments.length) {
         if (contentNode) {
-          contentNode.innerHTML = '<div class="dashboard-sidebar-planner-placeholder">' + escapeHtml(tr('No department selected.', 'Aucun departement selectionne.')) + '</div>';
+          contentNode.innerHTML = '<div class="dashboard-sidebar-planner-placeholder">' + escapeHtml(tr('No department selected.', 'Aucun departement selectionne.', 'Nessun dipartimento selezionato.')) + '</div>';
         }
         if (metaNode) {
           metaNode.textContent = '';
@@ -862,12 +865,12 @@
           return total + (Array.isArray(sectionState.section && sectionState.section.rows) ? sectionState.section.rows.length : 0);
         }, 0);
         metaNode.innerHTML =
-          '<span><strong>' + tr('Departments:', 'Departements :') + '</strong> ' + escapeHtml(departmentNames || String(selectedDepartments[0] && selectedDepartments[0].name || tr('Department', 'Departement'))) + '</span>' +
-          '<span><strong>' + tr('Employees:', 'Employes :') + '</strong> ' + totalEmployees + '</span>' +
-          '<span><strong>' + tr('Type:', 'Type :') + '</strong> ' + escapeHtml(documentType === 'attendance' ? tr('Signatures / attendance', 'Signatures / presences') : tr('Planning', 'Planning')) + '</span>' +
-          '<span><strong>' + tr('Month:', 'Mois :') + '</strong> ' + escapeHtml(monthLabel(baseMonth)) + '</span>' +
-          '<span><strong>' + tr('Generated:', 'Genere :') + '</strong> ' + escapeHtml(dateTimeLabel(generatedAt)) + '</span>' +
-          '<span><strong>' + tr('Author:', 'Auteur :') + '</strong> ' + escapeHtml(generatedBy) + '</span>';
+          '<span><strong>' + tr('Departments:', 'Departements :', 'Dipartimenti:') + '</strong> ' + escapeHtml(departmentNames || String(selectedDepartments[0] && selectedDepartments[0].name || tr('Department', 'Departement', 'Dipartimento'))) + '</span>' +
+          '<span><strong>' + tr('Employees:', 'Employes :', 'Dipendenti:') + '</strong> ' + totalEmployees + '</span>' +
+          '<span><strong>' + tr('Type:', 'Type :', 'Tipo:') + '</strong> ' + escapeHtml(documentType === 'attendance' ? tr('Signatures / attendance', 'Signatures / presences', 'Firme / presenze') : tr('Planning', 'Planning', 'Planning')) + '</span>' +
+          '<span><strong>' + tr('Month:', 'Mois :', 'Mese:') + '</strong> ' + escapeHtml(monthLabel(baseMonth)) + '</span>' +
+          '<span><strong>' + tr('Generated:', 'Genere :', 'Generato:') + '</strong> ' + escapeHtml(dateTimeLabel(generatedAt)) + '</span>' +
+          '<span><strong>' + tr('Author:', 'Auteur :', 'Autore:') + '</strong> ' + escapeHtml(generatedBy) + '</span>';
       }
 
       if (contentNode) {
@@ -960,7 +963,7 @@
     if (downloadButton) {
       downloadButton.addEventListener('click', function () {
         if (!currentRender) {
-          notifyError(tr('No planning data available to export.', 'Aucune donnee de planning disponible pour l export.'));
+          notifyError(tr('No planning data available to export.', 'Aucune donnee de planning disponible pour l export.', 'Nessun dato del planning disponibile per l\'esportazione.'));
           return;
         }
         var mode = String(currentRender.mode || 'planning');
@@ -969,14 +972,14 @@
         var fileSlug = depNames.length ? depNames.join('-') : String((currentRender.department && currentRender.department.name) || 'department');
         var fileName = prefix + '-' + fileSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + toDateKey(currentRender.baseMonth).slice(0, 7) + '.csv';
         downloadTextFile(fileName, buildCombinedCsv(), 'text/csv;charset=utf-8');
-        notifySuccess(tr('CSV downloaded successfully.', 'CSV telecharge avec succes.'));
+        notifySuccess(tr('CSV downloaded successfully.', 'CSV telecharge avec succes.', 'CSV scaricato con successo.'));
       });
     }
 
     if (excelButton) {
       excelButton.addEventListener('click', function () {
         if (!currentRender) {
-          notifyError(tr('No planning data available to export.', 'Aucune donnee de planning disponible pour l export.'));
+          notifyError(tr('No planning data available to export.', 'Aucune donnee de planning disponible pour l export.', 'Nessun dato del planning disponibile per l\'esportazione.'));
           return;
         }
         var period = toDateKey(currentRender.baseMonth).slice(0, 7);
@@ -987,18 +990,18 @@
         var fileName = prefix + '-' + fileSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + period + '.xls';
         var excel = buildMultiDepartmentExcelHtml(currentRender);
         downloadTextFile(fileName, excel, 'application/vnd.ms-excel;charset=utf-8');
-        notifySuccess(tr('Excel file downloaded successfully.', 'Fichier Excel telecharge avec succes.'));
+        notifySuccess(tr('Excel file downloaded successfully.', 'Fichier Excel telecharge avec succes.', 'File Excel scaricato con successo.'));
       });
     }
 
     if (saveDocumentButton) {
       saveDocumentButton.addEventListener('click', async function () {
         if (!currentRender) {
-          notifyError(tr('No planning data available to save.', 'Aucune donnee de planning disponible a enregistrer.'));
+          notifyError(tr('No planning data available to save.', 'Aucune donnee de planning disponible a enregistrer.', 'Nessun dato del planning disponibile da salvare.'));
           return;
         }
         if (!config.apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-          notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+          notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.', 'API del dashboard non disponibile.'));
           return;
         }
 
@@ -1017,7 +1020,7 @@
         var fileMimeType = mode === 'attendance' ? 'text/html; charset=utf-8' : 'text/csv; charset=utf-8';
 
         saveDocumentButton.disabled = true;
-        setFeedback(tr('Saving file to Documents...', 'Enregistrement du fichier dans Documents...'), false);
+        setFeedback(tr('Saving file to Documents...', 'Enregistrement du fichier dans Documents...', 'Salvataggio del file in Documenti...'), false);
         try {
           var response = await window.AppAPI.postJSON(config.apiDashboard, {
             action: 'save_dashboard_document',
@@ -1030,13 +1033,13 @@
           });
 
           if (!response || response.ok === false || response.success === false) {
-            throw new Error((response && (response.error || response.message)) || tr('Unable to save planning document.', 'Impossible d enregistrer le document de planning.'));
+            throw new Error((response && (response.error || response.message)) || tr('Unable to save planning document.', 'Impossible d enregistrer le document de planning.', 'Impossibile salvare il documento del planning.'));
           }
 
-          setFeedback(tr('Saved to Documents: ', 'Enregistre dans Documents : ') + String(response.file_name || baseName), false);
-          notifySuccess(tr('Document saved to Documents and ready for sharing with employees.', 'Document enregistre dans Documents et pret a etre partage avec les employes.'));
+          setFeedback(tr('Saved to Documents: ', 'Enregistre dans Documents : ', 'Salvato in Documenti: ') + String(response.file_name || baseName), false);
+          notifySuccess(tr('Document saved to Documents and ready for sharing with employees.', 'Document enregistre dans Documents et pret a etre partage avec les employes.', 'Documento salvato in Documenti e pronto per la condivisione con i dipendenti.'));
         } catch (error) {
-          var message = (error && error.message) ? error.message : tr('Unable to save planning document.', 'Impossible d enregistrer le document de planning.');
+          var message = (error && error.message) ? error.message : tr('Unable to save planning document.', 'Impossible d enregistrer le document de planning.', 'Impossibile salvare il documento del planning.');
           setFeedback(message, true);
           notifyError(message);
         } finally {
@@ -1047,7 +1050,7 @@
 
     function openPrintDialog() {
       if (!currentRender) {
-        notifyError(tr('No planning data available to print.', 'Aucune donnee de planning disponible a imprimer.'));
+        notifyError(tr('No planning data available to print.', 'Aucune donnee de planning disponible a imprimer.', 'Nessun dato del planning disponibile per la stampa.'));
         return;
       }
 
@@ -1072,7 +1075,7 @@
     if (pdfButton) {
       pdfButton.addEventListener('click', function () {
         openPrintDialog();
-        setFeedback('In the print dialog choose "Save as PDF".', false);
+        setFeedback(tr('In the print dialog choose "Save as PDF".', 'Dans la boite d impression choisissez "Enregistrer au format PDF".', 'Nella finestra di stampa scegli "Salva come PDF".'), false);
       });
     }
 

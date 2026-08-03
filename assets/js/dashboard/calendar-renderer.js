@@ -29,8 +29,9 @@
     var getSuggestedAssignableUser = options.getSuggestedAssignableUser;
     var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     var isFr = locale.indexOf('fr') === 0;
-    var tr = function (enText, frText) { return isFr ? frText : enText; };
-    var weekdayFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' });
+    var isIt = locale.indexOf('it') === 0;
+    var tr = function (enText, frText, itText) { return isFr ? frText : (isIt && itText ? itText : enText); };
+    var weekdayFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US'), { weekday: 'short' });
     var todayKey = dateKey(calendarToday);
 
     function escapeHtml(value) {
@@ -136,7 +137,7 @@
       var assignmentId = Number(baseEvent.assignment_id || 0);
       var activeUserId = Number(state.activeUserId || 0);
       var activeShiftId = Number(state.activeShiftId || 0);
-      var activeUserName = (state.activeUserName || '').trim() || tr('this employee', 'cet employe');
+      var activeUserName = (state.activeUserName || '').trim() || tr('this employee', 'cet employe', 'questo dipendente');
       var badge = (baseEvent.shift_icon ? renderIconHtml(baseEvent.shift_icon, shiftColor) : '');
       var assignedEmployees = (group.events || []).filter(function (event) {
         return Number(event.user_id || 0) > 0;
@@ -165,7 +166,7 @@
       var isSidebarAssignableTarget = isSidebarAssignCandidate && availabilityStatus.available;
       var sidebarUnavailableReason = (!availabilityStatus.available && availabilityStatus.reason)
         ? String(availabilityStatus.reason)
-        : tr('Unavailable.', 'Indisponible.');
+        : tr('Unavailable.', 'Indisponible.', 'Non disponibile.');
       var suggestedAssignableUser = null;
       if (!isSidebarAssignableTarget && isSidebarAssignCandidate && typeof getSuggestedAssignableUser === 'function') {
         suggestedAssignableUser = getSuggestedAssignableUser(
@@ -188,10 +189,10 @@
           var employeeName = (employeeEvent.user_name || '').trim();
           var employeeInitials = employeeName.split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
           var employeeBadge = employeeInitials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + shiftColor + '; background:' + shiftColor + '; color:#ffffff;">' + employeeInitials + '</span>' : '';
-          var employeeFullName = employeeName || tr('Employee', 'Employe');
+          var employeeFullName = employeeName || tr('Employee', 'Employe', 'Dipendente');
           var monthSummary = getMonthlyHoursSummary(employeeId, employeeEvent.work_date || '');
           var monthSummaryChip = monthSummary
-            ? ('<span class="calendar-event-user-hours">' + escapeHtml(tr('Month', 'Mois')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</span>')
+            ? ('<span class="calendar-event-user-hours">' + escapeHtml(tr('Month', 'Mois', 'Mese')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</span>')
             : '';
           var employeeLabel = '<span class="calendar-event-user-text"><span class="calendar-event-user-fullname">' + employeeFullName + '</span>' + monthSummaryChip + '</span>';
           if (isPastSlot) {
@@ -203,8 +204,8 @@
         employeeSlot = isSidebarAssignableTarget
           ? '\n            <div class="calendar-event-slot-stack">\n              <button type="button" class="calendar-event-slot-empty is-sidebar-assign-prompt" data-calendar-sidebar-assign data-user-id="' + activeUserId + '" data-user-name="' + escapeHtml(activeUserName) + '" data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" aria-label="Assign ' + escapeHtml(activeUserName) + ' to this open shift">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">Assign ' + escapeHtml(activeUserName) + '?</span>\n              </button>\n            </div>'
           : (suggestedAssignableUser
-            ? '\n            <div class="calendar-event-slot-stack">\n              <button type="button" class="calendar-event-slot-empty is-sidebar-assign-prompt" data-calendar-sidebar-assign data-user-id="' + Number(suggestedAssignableUser.id || 0) + '" data-user-name="' + escapeHtml(String(suggestedAssignableUser.name || tr('Employee', 'Employe'))) + '" data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" aria-label="Assign suggested employee to this open shift">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">' + tr('Suggestion', 'Suggestion') + ': ' + escapeHtml(String(suggestedAssignableUser.name || tr('Employee', 'Employe'))) + '</span>\n                ' + (isCrossDepartmentSuggestion
-                  ? ('<span class="calendar-event-slot-suggestion-badge">' + tr('Other department', 'Autre departement') + ': ' + escapeHtml(String(suggestedAssignableUser.departmentName || tr('Department', 'Departement'))) + '</span>')
+            ? '\n            <div class="calendar-event-slot-stack">\n              <button type="button" class="calendar-event-slot-empty is-sidebar-assign-prompt" data-calendar-sidebar-assign data-user-id="' + Number(suggestedAssignableUser.id || 0) + '" data-user-name="' + escapeHtml(String(suggestedAssignableUser.name || tr('Employee', 'Employe', 'Dipendente'))) + '" data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" aria-label="Assign suggested employee to this open shift">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">' + tr('Suggestion', 'Suggestion', 'Suggerimento') + ': ' + escapeHtml(String(suggestedAssignableUser.name || tr('Employee', 'Employe', 'Dipendente'))) + '</span>\n                ' + (isCrossDepartmentSuggestion
+                  ? ('<span class="calendar-event-slot-suggestion-badge">' + tr('Other department', 'Autre departement', 'Altro dipartimento') + ': ' + escapeHtml(String(suggestedAssignableUser.departmentName || tr('Department', 'Departement', 'Dipartimento'))) + '</span>')
                   : '') + '\n              </button>\n            </div>'
             : (isSidebarAssignCandidate
             ? '\n            <div class="calendar-event-slot-stack">\n              <span class="calendar-event-slot-empty is-sidebar-unavailable" title="' + escapeHtml(sidebarUnavailableReason) + '">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">' + escapeHtml(sidebarUnavailableReason) + '</span>\n              </span>\n            </div>'
@@ -238,14 +239,14 @@
           work_date: key,
           status: 'open',
           shift_id: shiftId,
-          shift_name: shift.name || tr('Shift', 'Poste'),
+          shift_name: shift.name || tr('Shift', 'Poste', 'Turno'),
           shift_icon: shift.icon || '🕒',
           shift_color: shift.color || '#2f6fed',
           shift_kind: shift.kind || 'work',
           start_time: shift.start_time || null,
           end_time: shift.end_time || null,
           department_id: activeDepartment ? activeDepartment.id : 0,
-          department_name: activeDepartment ? activeDepartment.name : tr('Department', 'Departement'),
+          department_name: activeDepartment ? activeDepartment.name : tr('Department', 'Departement', 'Dipartimento'),
           department_color: activeDepartment ? activeDepartment.color : null,
           user_id: 0,
           user_name: '',
@@ -276,7 +277,7 @@
       });
       var topEvents = monthEvents.slice(0, 2);
       return '\n        <article class="calendar-year-card' + (monthIndex === calendarToday.getMonth() ? ' is-current' : '') + '" data-calendar-date="' + monthDate.getFullYear() + '-' + pad(monthIndex + 1) + '-01">\n          <header class="calendar-year-head">\n            <span class="calendar-year-label">' + monthNames[monthIndex] + '</span>\n            <span class="calendar-year-number">' + monthEvents.length + '</span>\n          </header>\n          <div class="calendar-year-events">\n            ' + (topEvents.length ? topEvents.map(function (event) {
-              return '\n              <div class="calendar-year-summary">\n                <span class="calendar-year-summary-title">' + event.work_date + '</span>\n                <span class="calendar-year-summary-meta">' + (event.shift_name || tr('Shift', 'Poste')) + (event.user_name ? ' • ' + event.user_name : '') + '</span>\n              </div>\n            ';
+              return '\n              <div class="calendar-year-summary">\n                <span class="calendar-year-summary-title">' + event.work_date + '</span>\n                <span class="calendar-year-summary-meta">' + (event.shift_name || tr('Shift', 'Poste', 'Turno')) + (event.user_name ? ' • ' + event.user_name : '') + '</span>\n              </div>\n            ';
             }).join('') : '<div class="calendar-empty"></div>') + '\n          </div>\n        </article>\n      ';
     };
 
@@ -286,7 +287,7 @@
       var selectedEvents = Array.from(groupEventsByShiftDate((eventsByDate().get(key) || []).slice()).values()).sort(function (a, b) {
         return String(a.base.start_time || '').localeCompare(String(b.base.start_time || ''));
       });
-      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' ' + tr('shifts', 'postes') + '</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (group) { return renderAssignmentCard(group, false); }).join('') : '<div class="dashboard-calendar-detail-empty">' + tr('No assignments for this date.', 'Aucune affectation pour cette date.') + '</div>') + '\n        </div>\n      ';
+      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' ' + tr('shifts', 'postes', 'turni') + '</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (group) { return renderAssignmentCard(group, false); }).join('') : '<div class="dashboard-calendar-detail-empty">' + tr('No assignments for this date.', 'Aucune affectation pour cette date.', 'Nessuna assegnazione per questa data.') + '</div>') + '\n        </div>\n      ';
     };
 
     var renderCalendar = function () {

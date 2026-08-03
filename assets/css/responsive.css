@@ -167,6 +167,26 @@
         grid-template-columns: 1fr;
     }
 
+    .admin-grid,
+    .dashboard-company-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-company-card-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-company-logo {
+        width: 48px;
+        height: 48px;
+        align-self: flex-start;
+    }
+
+    .dashboard-company-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .settings-list-cols,
     .settings-list-cols-user,
     .settings-list-cols-user-create,
@@ -219,6 +239,24 @@
         max-height: none;
         overflow: visible;
         padding-right: 0;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-list-cols.settings-list-cols-shift-create {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-shift-create-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-shift-create-actions .admin-action-link {
+        width: auto;
+        min-width: 150px;
     }
 
     .settings-shift-create-column {
@@ -322,6 +360,17 @@
 
     .dashboard-sidebar-scroll {
         padding: 0.7rem 0.5rem;
+    }
+
+    .dashboard-sidebar-handle {
+        width: 30px;
+        height: 64px;
+        right: -30px;
+        z-index: 12100;
+    }
+
+    .dashboard-sidebar-handle span {
+        font-size: 1.24rem;
     }
 
     .route-dashboard .site-icon-btn,
@@ -558,6 +607,25 @@
 
     .dashboard-settings-modal .settings-shift-create-column {
         grid-template-columns: 1fr;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-list-cols.settings-list-cols-shift-create {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-settings-modal .settings-shift-create-column-right .settings-field:has([data-field="description"]),
+    .settings-shift-create-column .settings-shift-advanced {
+        grid-column: auto;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-shift-create-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .settings-create-row.settings-create-row-shift .settings-shift-create-actions .admin-action-link {
+        width: 100%;
+        min-width: 0;
     }
 
     .settings-tabs {
@@ -1195,6 +1263,8 @@
 @media (max-width: 1100px) {
     .site-burger-btn {
         display: inline-flex;
+        position: relative;
+        z-index: 3620;
     }
 
     .site-icon-group {

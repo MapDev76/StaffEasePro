@@ -16,6 +16,7 @@ $routes = [
     'api-departments' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-users' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-shifts' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
+    'api-commercial' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-notifications' => realpath(__DIR__ . '/../backend/controllers/ApiNotificationsController.php'),
     'document-download' => realpath(__DIR__ . '/../backend/controllers/DocumentDownloadController.php'),
     'my-space' => realpath(__DIR__ . '/../backend/controllers/EmployeeSpaceController.php'),

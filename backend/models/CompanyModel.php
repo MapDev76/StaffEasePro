@@ -222,6 +222,25 @@ class CompanyModel
                             WHERE d_count.company_id = c.id) AS users_count',
             'GROUP_CONCAT(DISTINCT CONCAT(u_admin.first_name, " ", u_admin.last_name) ORDER BY u_admin.last_name SEPARATOR "||") AS admins',
             'GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments',
+                        '(SELECT COUNT(DISTINCT uc.user_id)
+                            FROM user_connections uc
+                            INNER JOIN users u_conn ON u_conn.id = uc.user_id
+                            INNER JOIN departments d_conn ON d_conn.id = u_conn.department_id
+                            WHERE d_conn.company_id = c.id
+                                AND uc.logged_out_at IS NULL
+                                AND uc.last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)) AS active_connections',
+                        '(SELECT GROUP_CONCAT(DISTINCT CONCAT(u_conn.first_name, " ", u_conn.last_name) ORDER BY u_conn.last_name SEPARATOR "||")
+                            FROM user_connections uc
+                            INNER JOIN users u_conn ON u_conn.id = uc.user_id
+                            INNER JOIN departments d_conn ON d_conn.id = u_conn.department_id
+                            WHERE d_conn.company_id = c.id
+                                AND uc.logged_out_at IS NULL
+                                AND uc.last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)) AS connected_users',
+                        '(SELECT MAX(uc.last_seen_at)
+                            FROM user_connections uc
+                            INNER JOIN users u_conn ON u_conn.id = uc.user_id
+                            INNER JOIN departments d_conn ON d_conn.id = u_conn.department_id
+                            WHERE d_conn.company_id = c.id) AS last_connection_at',
         ];
 
         if ($this->hasCompanyColumn('logo_path')) {
@@ -279,6 +298,9 @@ class CompanyModel
             $row['admins'] = empty($row['admins']) ? [] : array_values(array_filter(explode('||', (string) $row['admins'])));
             $row['departments'] = empty($row['departments']) ? [] : array_values(array_filter(explode('||', (string) $row['departments'])));
             $row['heads'] = empty($row['heads']) ? [] : array_values(array_filter(explode('||', (string) $row['heads'])));
+            $row['connected_users'] = empty($row['connected_users']) ? [] : array_values(array_filter(explode('||', (string) $row['connected_users'])));
+            $row['active_connections'] = (int) ($row['active_connections'] ?? 0);
+            $row['last_connection_at'] = $row['last_connection_at'] ?? null;
             $row['departments_count'] = (int) ($row['departments_count'] ?? 0);
             $row['users_count'] = (int) ($row['users_count'] ?? 0);
         }

@@ -583,8 +583,9 @@
     if (!shiftIds.length) return;
     const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const isFr = locale.startsWith('fr');
-    const tr = (en, fr) => (isFr ? fr : en);
-    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this shift?', 'Supprimer ce poste ?'), tr('Confirm deletion', 'Confirmer la suppression')) : false;
+    const isIt = locale.startsWith('it');
+    const tr = (en, fr, it) => (isFr ? fr : (isIt && it ? it : en));
+    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this shift?', 'Supprimer ce poste ?', 'Eliminare questo turno?'), tr('Confirm deletion', 'Confirmer la suppression', 'Conferma eliminazione')) : false;
     if (!feedback?.confirm) {
       notifyError('Confirmation dialog is not available.');
       return;

@@ -2,11 +2,12 @@
   const apiUrl = window.DashboardConfig?.apiDashboard;
   const locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   const isFr = locale.startsWith('fr');
-  const tr = (enText, frText) => (isFr ? frText : enText);
+  const isIt = locale.startsWith('it');
+  const tr = (enText, frText, itText) => (isFr ? frText : (isIt && itText ? itText : enText));
   const feedback = window.DashboardFeedback;
   const iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
   const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
-  const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' });
+  const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US'), { weekday: 'short' });
   const WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
     const baseDate = new Date(2024, 0, 1 + value, 12, 0, 0, 0);
     const label = WEEKDAY_FORMATTER.format(baseDate).replace('.', '');
@@ -158,7 +159,7 @@
 
   function notifyError(message) {
     if (feedback) {
-      feedback.error(tr('Oops!', 'Erreur'), message);
+      feedback.error(tr('Oops!', 'Erreur', 'Errore'), message);
       return;
     }
     console.error(message);
@@ -166,7 +167,7 @@
 
   function notifySuccess(message) {
     if (feedback) {
-      feedback.success(tr('Done', 'Termine'), message);
+      feedback.success(tr('Done', 'Termine', 'Fatto'), message);
       return;
     }
   }
@@ -241,13 +242,13 @@
     };
 
     if (!selectedShiftIds.length) {
-      throw new Error(tr('Select at least one shift template.', 'Selectionnez au moins un modele de poste.'));
+      throw new Error(tr('Select at least one shift template.', 'Selectionnez au moins un modele de poste.', 'Seleziona almeno un modello di turno.'));
     }
 
     if (scope === 'employee') {
       const targetUserId = parseInt(String(assignmentPlannerUser?.value || '0'), 10) || 0;
       if (targetUserId <= 0) {
-        throw new Error(tr('Select one employee.', 'Selectionnez un employe.'));
+        throw new Error(tr('Select one employee.', 'Selectionnez un employe.', 'Seleziona un dipendente.'));
       }
       payload.target_user_id = targetUserId;
     } else if (scope === 'department') {
@@ -268,7 +269,7 @@
     const isOk = !!(response && (response.success || response.ok));
     const forecast = response && typeof response.forecast === 'object' ? response.forecast : null;
     if (!isOk || !forecast) {
-      assignmentPlannerForecastSummary.textContent = tr('Forecast unavailable.', 'Prevision indisponible.');
+      assignmentPlannerForecastSummary.textContent = tr('Forecast unavailable.', 'Prevision indisponible.', 'Previsione non disponibile.');
       assignmentPlannerForecastImpact.innerHTML = '';
       return;
     }
@@ -278,12 +279,12 @@
     const uncoveredDays = Number(forecast.uncovered_days_open || 0);
     const coveredAtMin = Number(forecast.covered_at_min_groups || 0);
 
-    assignmentPlannerForecastSummary.textContent = String(response.summary || tr('Coverage forecast ready.', 'Prevision de couverture prete.'));
+    assignmentPlannerForecastSummary.textContent = String(response.summary || tr('Coverage forecast ready.', 'Prevision de couverture prete.', 'Previsione di copertura pronta.'));
     assignmentPlannerForecastImpact.innerHTML = [
-      `<span class="settings-auto-assign-impact-chip ${slotsOpen > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Open slots now', 'Postes ouverts'))}: ${slotsOpen}</span>`,
-      `<span class="settings-auto-assign-impact-chip ${predictedRemainingAtMin > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Projected open after run', 'Ouverts projetes apres execution'))}: ${predictedRemainingAtMin}</span>`,
-      `<span class="settings-auto-assign-impact-chip ${uncoveredDays > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Uncovered days', 'Jours non couverts'))}: ${uncoveredDays}</span>`,
-      `<span class="settings-auto-assign-impact-chip is-positive">${escapeHtml(tr('Shift-days already covered', 'Jours-poste deja couverts'))}: ${coveredAtMin}</span>`
+      `<span class="settings-auto-assign-impact-chip ${slotsOpen > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Open slots now', 'Postes ouverts', 'Turni aperti ora'))}: ${slotsOpen}</span>`,
+      `<span class="settings-auto-assign-impact-chip ${predictedRemainingAtMin > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Projected open after run', 'Ouverts projetes apres execution', 'Aperti previsti dopo l\'esecuzione'))}: ${predictedRemainingAtMin}</span>`,
+      `<span class="settings-auto-assign-impact-chip ${uncoveredDays > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Uncovered days', 'Jours non couverts', 'Giorni non coperti'))}: ${uncoveredDays}</span>`,
+      `<span class="settings-auto-assign-impact-chip is-positive">${escapeHtml(tr('Shift-days already covered', 'Jours-poste deja couverts', 'Giorni-turno già coperti'))}: ${coveredAtMin}</span>`
     ].join('');
   }
 
@@ -291,11 +292,11 @@
     if (!apiUrl || !window.AppAPI) return;
     const { payload } = buildAssignmentPlannerPayload('auto_assign_forecast');
     if (assignmentPlannerForecastSummary) {
-      assignmentPlannerForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...');
+      assignmentPlannerForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...', 'Calcolo della previsione...');
     }
     const response = await AppAPI.postJSON(apiUrl, payload);
     if (!(response && (response.success || response.ok))) {
-      throw new Error(response?.error || tr('Forecast failed.', 'La prevision a echoue.'));
+      throw new Error(response?.error || tr('Forecast failed.', 'La prevision a echoue.', 'Previsione non riuscita.'));
     }
     renderAssignmentPlannerForecast(response);
     return response;
@@ -306,18 +307,18 @@
     const { payload } = buildAssignmentPlannerPayload('auto_assign_open');
     const response = await AppAPI.postJSON(apiUrl, payload);
     if (!(response && (response.success || response.ok))) {
-      throw new Error(response?.error || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.'));
+      throw new Error(response?.error || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.', 'Assegnazione automatica non riuscita.'));
     }
 
     const assignedCount = Number(response.assigned_count || 0);
     const note = response?.note ? ` ${String(response.note)}` : '';
-    notifySuccess(`${tr('Automatic assignment completed.', 'Affectation automatique terminee.')} ${assignedCount} ${tr('slots assigned.', 'affectations creees.')}${note}`);
+    notifySuccess(`${tr('Automatic assignment completed.', 'Affectation automatique terminee.', 'Assegnazione automatica completata.')} ${assignedCount} ${tr('slots assigned.', 'affectations creees.', 'assegnazioni create.')}${note}`);
 
     if (feedback && typeof feedback.reloadSettingsTabWithSuccess === 'function') {
       feedback.reloadSettingsTabWithSuccess(
         'assignment-planner',
-        tr('Done', 'Termine'),
-        tr('Automatic assignment completed.', 'Affectation automatique terminee.')
+        tr('Done', 'Termine', 'Fatto'),
+        tr('Automatic assignment completed.', 'Affectation automatique terminee.', 'Assegnazione automatica completata.')
       );
       return;
     }
@@ -398,9 +399,9 @@
       const workedClass = workedDaysCount < 12 ? 'is-warning' : workedDaysCount > 24 ? 'is-negative' : 'is-positive';
       smallNode.classList.add('settings-assignment-employee-stats');
       smallNode.innerHTML = [
-        `<span class="settings-assignment-employee-stat ${crossClass}">${escapeHtml(tr('Other dept', 'Autre departement'))}: ${stats.crossDepartmentAssigned}</span>`,
-        `<span class="settings-assignment-employee-stat ${restClass}">${escapeHtml(tr('Rest done', 'Repos faits'))}: ${stats.restDone}</span>`,
-        `<span class="settings-assignment-employee-stat ${workedClass}">${escapeHtml(tr('Worked days', 'Jours travailles'))}: ${workedDaysCount}</span>`
+        `<span class="settings-assignment-employee-stat ${crossClass}">${escapeHtml(tr('Other dept', 'Autre departement', 'Altro dipartimento'))}: ${stats.crossDepartmentAssigned}</span>`,
+        `<span class="settings-assignment-employee-stat ${restClass}">${escapeHtml(tr('Rest done', 'Repos faits', 'Riposi effettuati'))}: ${stats.restDone}</span>`,
+        `<span class="settings-assignment-employee-stat ${workedClass}">${escapeHtml(tr('Worked days', 'Jours travailles', 'Giorni lavorati'))}: ${workedDaysCount}</span>`
       ].join(' ');
     });
   }
@@ -420,8 +421,8 @@
     wrap.hidden = !visible;
     toggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
     toggle.textContent = visible
-      ? tr('Hide daily assignments list', 'Masquer la liste quotidienne des affectations')
-      : tr('Show daily assignments list', 'Afficher la liste quotidienne des affectations');
+      ? tr('Hide daily assignments list', 'Masquer la liste quotidienne des affectations', 'Nascondi lista quotidiana assegnazioni')
+      : tr('Show daily assignments list', 'Afficher la liste quotidienne des affectations', 'Mostra lista quotidiana assegnazioni');
   }
 
   function todayKey() {
@@ -723,35 +724,35 @@
 
     const chips = [
       {
-        label: `${tr('Open now', 'Ouverts maintenant')}: ${currentOpenSlots}`,
+        label: `${tr('Open now', 'Ouverts maintenant', 'Aperti ora')}: ${currentOpenSlots}`,
         className: currentOpenSlots > 0 ? 'is-warning' : 'is-positive',
       },
       {
-        label: `${tr('Projected covered', 'Couverture projetee')}: +${projectedCovered}`,
+        label: `${tr('Projected covered', 'Couverture projetee', 'Copertura prevista')}: +${projectedCovered}`,
         className: projectedCovered > 0 ? 'is-positive' : 'is-negative',
       },
       {
         className: params.priorityDepartment.id > 0 ? 'is-warning' : 'is-positive',
         label: params.priorityDepartment.id > 0
-          ? `${tr('Priority dept', 'Departement prioritaire')}: ${params.priorityDepartment.label || '#' + params.priorityDepartment.id}`
-          : tr('Priority dept: none', 'Departement prioritaire: aucun'),
+          ? `${tr('Priority dept', 'Departement prioritaire', 'Dipartimento prioritario')}: ${params.priorityDepartment.label || '#' + params.priorityDepartment.id}`
+          : tr('Priority dept: none', 'Departement prioritaire: aucun', 'Dipartimento prioritario: nessuno'),
       },
       {
         className: params.priorityDepartmentStrictInternal ? 'is-warning' : 'is-positive',
         label: params.priorityDepartmentStrictInternal
-          ? tr('Priority dept protected from external staff', 'Departement prioritaire protege des employes externes')
-          : tr('Priority dept can use external staff', 'Departement prioritaire peut utiliser des employes externes'),
+          ? tr('Priority dept protected from external staff', 'Departement prioritaire protege des employes externes', 'Dipartimento prioritario protetto dal personale esterno')
+          : tr('Priority dept can use external staff', 'Departement prioritaire peut utiliser des employes externes', 'Il dipartimento prioritario può usare personale esterno'),
       },
       {
-        label: `${tr('Projected open after run', 'Ouverts projetes apres execution')}: ${predictedRemainingAtMin}`,
+        label: `${tr('Projected open after run', 'Ouverts projetes apres execution', 'Aperti previsti dopo l\'esecuzione')}: ${predictedRemainingAtMin}`,
         className: predictedRemainingAtMin > 0 ? 'is-warning' : 'is-positive',
       },
       {
-        label: `${tr('Uncovered days delta', 'Delta jours non couverts')}: ${uncoveredDaysDelta >= 0 ? '+' : ''}${uncoveredDaysDelta}`,
+        label: `${tr('Uncovered days delta', 'Delta jours non couverts', 'Delta giorni non coperti')}: ${uncoveredDaysDelta >= 0 ? '+' : ''}${uncoveredDaysDelta}`,
         className: uncoveredDaysDelta > 0 ? 'is-positive' : uncoveredDaysDelta < 0 ? 'is-negative' : 'is-warning',
       },
       {
-        label: `${tr('Policy window', 'Fenetre policy')}: ${params.boundedMinWorkDays}-${params.boundedMaxWorkDays} ${tr('work', 'travail')} / ${params.boundedMinRestDays}-${params.boundedMaxRestDays} ${tr('rest', 'repos')}`,
+        label: `${tr('Policy window', 'Fenetre policy', 'Finestra policy')}: ${params.boundedMinWorkDays}-${params.boundedMaxWorkDays} ${tr('work', 'travail', 'lavoro')} / ${params.boundedMinRestDays}-${params.boundedMaxRestDays} ${tr('rest', 'repos', 'riposo')}`,
         className: 'is-warning',
       },
     ];
@@ -779,28 +780,28 @@
     const projectedCovered = Math.max(0, currentOpenSlots - projectedOpenSlots);
     const rows = [
       {
-        label: tr('Open slots', 'Postes ouverts'),
+        label: tr('Open slots', 'Postes ouverts', 'Turni aperti'),
         before: currentOpenSlots,
         after: projectedOpenSlots,
         delta: projectedOpenSlots - currentOpenSlots,
         positiveWhenLower: true,
       },
       {
-        label: tr('Uncovered days', 'Jours non couverts'),
+        label: tr('Uncovered days', 'Jours non couverts', 'Giorni non coperti'),
         before: currentUncoveredDays,
         after: projectedUncoveredDays,
         delta: projectedUncoveredDays - currentUncoveredDays,
         positiveWhenLower: true,
       },
       {
-        label: tr('Assignments expected', 'Affectations attendues'),
+        label: tr('Assignments expected', 'Affectations attendues', 'Assegnazioni previste'),
         before: 0,
         after: projectedCovered,
         delta: projectedCovered,
         positiveWhenLower: false,
       },
       {
-        label: tr('Need to reach minimum', 'Besoin min'),
+        label: tr('Need to reach minimum', 'Besoin min', 'Fabbisogno minimo'),
         before: currentNeedToMinimum,
         after: projectedOpenSlots,
         delta: projectedOpenSlots - currentNeedToMinimum,
@@ -903,41 +904,41 @@
       const shiftCreationSuggestions = Array.isArray(data?.shift_creation_suggestions) ? data.shift_creation_suggestions : [];
 
       if (status === 'shortage') {
-        summary = tr('Potential shortage detected for selected range.', 'Risque de manque detecte pour la plage selectionnee.');
+        summary = tr('Potential shortage detected for selected range.', 'Risque de manque detecte pour la plage selectionnee.', 'Possibile carenza rilevata per il periodo selezionato.');
       } else if (status === 'surplus') {
-        summary = tr('Potential surplus detected for selected range.', 'Potentiel surplus detecte pour la plage selectionnee.');
+        summary = tr('Potential surplus detected for selected range.', 'Potentiel surplus detecte pour la plage selectionnee.', 'Possibile surplus rilevato per il periodo selezionato.');
       } else {
-        summary = tr('Coverage looks balanced for selected range.', 'La couverture semble equilibree pour la plage selectionnee.');
+        summary = tr('Coverage looks balanced for selected range.', 'La couverture semble equilibree pour la plage selectionnee.', 'La copertura appare bilanciata per il periodo selezionato.');
       }
 
       if (Number(raw.employees_in_scope || 0) <= 0) {
-        tips.push(tr('No active employees in scope. Add employees or expand scope.', 'Aucun employe actif dans le scope. Ajoutez des employes ou elargissez le scope.'));
+        tips.push(tr('No active employees in scope. Add employees or expand scope.', 'Aucun employe actif dans le scope. Ajoutez des employes ou elargissez le scope.', 'Nessun dipendente attivo nell\'ambito. Aggiungi dipendenti o amplia l\'ambito.'));
       }
       if (status === 'shortage') {
-        tips.push(tr('Reduce weekly rest days or increase max work days for this run.', 'Reduisez les jours de repos hebdomadaires ou augmentez les jours max de travail pour ce calcul.'));
-        tips.push(tr('Expand range and include more shift chips to rebalance load.', 'Elargissez la plage et incluez plus de chips de poste pour reequilibrer la charge.'));
+        tips.push(tr('Reduce weekly rest days or increase max work days for this run.', 'Reduisez les jours de repos hebdomadaires ou augmentez les jours max de travail pour ce calcul.', 'Riduci i giorni di riposo settimanali o aumenta i giorni massimi di lavoro per questa esecuzione.'));
+        tips.push(tr('Expand range and include more shift chips to rebalance load.', 'Elargissez la plage et incluez plus de chips de poste pour reequilibrer la charge.', 'Amplia il periodo e includi più turni per riequilibrare il carico.'));
       } else if (status === 'surplus') {
-        tips.push(tr('Surplus detected: create extra shifts in departments with demand.', 'Surplus detecte: creez des postes supplementaires dans les departements en demande.'));
+        tips.push(tr('Surplus detected: create extra shifts in departments with demand.', 'Surplus detecte: creez des postes supplementaires dans les departements en demande.', 'Surplus rilevato: crea turni aggiuntivi nei dipartimenti con maggiore domanda.'));
         if (predictedSurplusCapacity > 0) {
-          tips.push(tr('Estimated extra assignable capacity', 'Capacite supplementaire estimable') + `: ${predictedSurplusCapacity}`);
+          tips.push(tr('Estimated extra assignable capacity', 'Capacite supplementaire estimable', 'Capacità extra assegnabile stimata') + `: ${predictedSurplusCapacity}`);
         }
         if (openSlots > 0) {
-          tips.push(tr('Open slots may remain because assignment is department-scoped.', 'Des postes ouverts peuvent rester car l\'affectation est limitee au departement.'));
+          tips.push(tr('Open slots may remain because assignment is department-scoped.', 'Des postes ouverts peuvent rester car l\'affectation est limitee au departement.', 'Alcuni turni aperti possono restare perché l\'assegnazione è limitata al dipartimento.'));
         }
       } else {
-        tips.push(tr('Coverage is near target. Run auto-assign and re-check remaining open slots.', 'La couverture est proche de la cible. Lancez l\'auto-assignation puis recontrolez les postes ouverts restants.'));
+        tips.push(tr('Coverage is near target. Run auto-assign and re-check remaining open slots.', 'La couverture est proche de la cible. Lancez l\'auto-assignation puis recontrolez les postes ouverts restants.', 'La copertura è vicina all\'obiettivo. Avvia l\'assegnazione automatica e ricontrolla i turni aperti restanti.'));
       }
 
       if (crossSuggestions.length > 0) {
         crossSuggestions.slice(0, 4).forEach((item) => {
           const dateValue = String(item?.work_date || '--');
-          const deptName = String(item?.department_name || tr('Department', 'Departement'));
+          const deptName = String(item?.department_name || tr('Department', 'Departement', 'Dipartimento'));
           const openCount = Number(item?.open_count || 0);
           const candidateNames = Array.isArray(item?.candidates)
             ? item.candidates.map((c) => String(c?.name || '').trim()).filter((v) => v !== '')
             : [];
           if (candidateNames.length > 0) {
-            tips.push(`${tr('Suggestion', 'Suggestion')} ${dateValue} - ${deptName} (${openCount} ${tr('open', 'ouverts')}): ${candidateNames.join(', ')}`);
+            tips.push(`${tr('Suggestion', 'Suggestion', 'Suggerimento')} ${dateValue} - ${deptName} (${openCount} ${tr('open', 'ouverts', 'aperti')}): ${candidateNames.join(', ')}`);
           }
         });
       }
@@ -947,32 +948,32 @@
           .slice(0, 5)
           .map((item) => `${String(item?.work_date || '--')} (${Number(item?.open_count || 0)})`)
           .join(', ');
-        tips.push(`${tr('Most uncovered days', 'Jours les plus decouverts')}: ${topDays}`);
+        tips.push(`${tr('Most uncovered days', 'Jours les plus decouverts', 'Giorni più scoperti')}: ${topDays}`);
       }
 
       if (shiftCreationSuggestions.length > 0) {
         shiftCreationSuggestions.slice(0, 4).forEach((item) => {
-          const deptName = String(item?.department_name || tr('Department', 'Departement'));
-          const shiftName = String(item?.shift_name || tr('Shift', 'Poste'));
+          const deptName = String(item?.department_name || tr('Department', 'Departement', 'Dipartimento'));
+          const shiftName = String(item?.shift_name || tr('Shift', 'Poste', 'Turno'));
           const openCount = Number(item?.open_slots || 0);
-          tips.push(`${tr('Create extra shifts', 'Creer des postes en plus')}: ${deptName} - ${shiftName} (+${openCount})`);
+          tips.push(`${tr('Create extra shifts', 'Creer des postes en plus', 'Crea turni aggiuntivi')}: ${deptName} - ${shiftName} (+${openCount})`);
         });
       }
 
       if (restMode === 'fixed') {
-        tips.push(tr('Fixed rest keeps routine stable but can cluster uncovered days.', 'Le repos fixe stabilise la routine mais peut concentrer les jours non couverts.'));
+        tips.push(tr('Fixed rest keeps routine stable but can cluster uncovered days.', 'Le repos fixe stabilise la routine mais peut concentrer les jours non couverts.', 'Il riposo fisso stabilizza la routine ma può concentrare i giorni non coperti.'));
       } else if (restMode === 'staggered') {
-        tips.push(tr('Staggered rest helps distribute rest days across the week.', 'La rotation scalaire aide a repartir les repos dans la semaine.'));
+        tips.push(tr('Staggered rest helps distribute rest days across the week.', 'La rotation scalaire aide a repartir les repos dans la semaine.', 'La rotazione scalare aiuta a distribuire i riposi nella settimana.'));
       } else {
-        tips.push(tr('Random rest may improve distribution but varies at each run.', 'La rotation aleatoire peut mieux repartir mais varie a chaque execution.'));
+        tips.push(tr('Random rest may improve distribution but varies at each run.', 'La rotation aleatoire peut mieux repartir mais varie a chaque execution.', 'La rotazione casuale può migliorare la distribuzione ma varia a ogni esecuzione.'));
       }
     } else {
-      summary = String(data?.summary || '').trim() || tr('Forecast unavailable.', 'Prevision indisponible.');
+      summary = String(data?.summary || '').trim() || tr('Forecast unavailable.', 'Prevision indisponible.', 'Previsione non disponibile.');
       (Array.isArray(data?.recommendations) ? data.recommendations : []).forEach((item) => tips.push(String(item || '')));
     }
 
     if (globalAutoAssignForecastSummary) {
-      globalAutoAssignForecastSummary.textContent = summary || tr('Forecast unavailable.', 'Prevision indisponible.');
+      globalAutoAssignForecastSummary.textContent = summary || tr('Forecast unavailable.', 'Prevision indisponible.', 'Previsione non disponibile.');
       globalAutoAssignForecastSummary.style.color = status === 'shortage' ? '#b42318' : status === 'surplus' ? '#1d4ed8' : '';
     }
     renderForecastImpact(data);
@@ -994,15 +995,15 @@
     if (!params.globalShiftSelection.allowedShiftIds.length) {
       renderGlobalForecast({
         status: 'shortage',
-        summary: tr('Select at least one shift chip to run forecast.', 'Selectionnez au moins un poste pour la prevision.'),
+        summary: tr('Select at least one shift chip to run forecast.', 'Selectionnez au moins un poste pour la prevision.', 'Seleziona almeno un turno per calcolare la previsione.'),
         metrics: [],
-        recommendations: [tr('Enable one or more shift chips before auto-assign.', 'Activez un ou plusieurs chips de poste avant l\'affectation automatique.')],
+        recommendations: [tr('Enable one or more shift chips before auto-assign.', 'Activez un ou plusieurs chips de poste avant l\'affectation automatique.', 'Attiva uno o più turni prima dell\'assegnazione automatica.')],
       });
       lastGlobalForecastResponse = null;
       return;
     }
     if (globalAutoAssignForecastSummary) {
-      globalAutoAssignForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...');
+      globalAutoAssignForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...', 'Calcolo della previsione...');
     }
     try {
       const res = await AppAPI.postJSON(apiUrl, {
@@ -1027,18 +1028,18 @@
       } else {
         renderGlobalForecast({
           status: 'unknown',
-          summary: tr('Forecast failed.', 'La prevision a echoue.'),
+          summary: tr('Forecast failed.', 'La prevision a echoue.', 'Previsione non riuscita.'),
           metrics: [],
-          recommendations: [String(res?.error || tr('Unknown error.', 'Erreur inconnue.'))],
+          recommendations: [String(res?.error || tr('Unknown error.', 'Erreur inconnue.', 'Errore sconosciuto.'))],
         });
       }
     } catch (error) {
       console.error(error);
       renderGlobalForecast({
         status: 'unknown',
-        summary: tr('Forecast unavailable.', 'Prevision indisponible.'),
+        summary: tr('Forecast unavailable.', 'Prevision indisponible.', 'Previsione non disponibile.'),
         metrics: [],
-        recommendations: [tr('Retry after updating period and limits.', 'Reessayez apres avoir ajuste la periode et les limites.')],
+        recommendations: [tr('Retry after updating period and limits.', 'Reessayez apres avoir ajuste la periode et les limites.', 'Riprova dopo aver aggiornato periodo e limiti.')],
       });
     }
   }
@@ -1116,15 +1117,15 @@
   function toRuleReasonLabel(reason) {
     switch (String(reason || 'special')) {
       case 'rest':
-        return tr('Weekly rest', 'Repos hebdomadaire');
+        return tr('Weekly rest', 'Repos hebdomadaire', 'Riposo settimanale');
       case 'leave':
-        return tr('Leave', 'Conge');
+        return tr('Leave', 'Conge', 'Permesso');
       case 'vacation':
-        return tr('Vacation', 'Vacances');
+        return tr('Vacation', 'Vacances', 'Vacanza');
       case 'sick':
-        return tr('Sick leave', 'Conge maladie');
+        return tr('Sick leave', 'Conge maladie', 'Malattia');
       default:
-        return tr('Special day', 'Jour special');
+        return tr('Special day', 'Jour special', 'Giorno speciale');
     }
   }
 
@@ -1134,7 +1135,7 @@
       return toRuleReasonLabel(normalized);
     }
     if (normalized === 'work') {
-      return tr('Work', 'Travail');
+      return tr('Work', 'Travail', 'Lavoro');
     }
     return normalized;
   }
@@ -1184,7 +1185,7 @@
     wrap.innerHTML = list.map((item) => {
       const safeDate = String(item?.date || '');
       const safeReason = String(item?.reason || 'special');
-      return `<span class="settings-auto-rule-chip" data-date="${safeDate}" data-reason="${safeReason}">${safeDate} • ${toRuleReasonLabel(safeReason)}<button type="button" data-auto-rule-remove-special="${safeDate}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible')}">×</button></span>`;
+      return `<span class="settings-auto-rule-chip" data-date="${safeDate}" data-reason="${safeReason}">${safeDate} • ${toRuleReasonLabel(safeReason)}<button type="button" data-auto-rule-remove-special="${safeDate}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible', 'Rimuovi la data non disponibile')}">×</button></span>`;
     }).join('');
   }
 
@@ -1362,13 +1363,13 @@
         const id = parseInt(String(item?.id || '0'), 10) || 0;
         const icon = String(item?.icon || '🕒');
         const iconLabel = isIconAsset(icon) ? '•' : icon;
-        const name = String(item?.name || tr('Shift', 'Poste'));
+        const name = String(item?.name || tr('Shift', 'Poste', 'Turno'));
         const departmentName = String(item?.department_name || '');
         return `<option value="${id}">${iconLabel} ${name}${departmentName ? ` • ${departmentName}` : ''}</option>`;
       })
       .join('');
     if (employeeModalOpenShift) {
-      employeeModalOpenShift.innerHTML = `<option value="0">${tr('All visible work shifts', 'Tous les postes de travail visibles')}</option>${optionHtml}`;
+      employeeModalOpenShift.innerHTML = `<option value="0">${tr('All visible work shifts', 'Tous les postes de travail visibles', 'Tutti i turni di lavoro visibili')}</option>${optionHtml}`;
     }
 
     const availableIds = new Set(options.map((item) => parseInt(String(item?.id || '0'), 10) || 0));
@@ -1379,14 +1380,14 @@
 
     if (employeeModalOpenShiftList) {
       if (!options.length) {
-        employeeModalOpenShiftList.innerHTML = `<span class="crud-modal-subtitle">${tr('No work shifts available in current scope.', 'Aucun poste de travail disponible dans le scope actuel.')}</span>`;
+        employeeModalOpenShiftList.innerHTML = `<span class="crud-modal-subtitle">${tr('No work shifts available in current scope.', 'Aucun poste de travail disponible dans le scope actuel.', 'Nessun turno di lavoro disponibile nell\'ambito attuale.')}</span>`;
       } else {
         employeeModalOpenShiftList.innerHTML = options.map((item) => {
           const id = parseInt(String(item?.id || '0'), 10) || 0;
           const checked = selectedOpenShiftFilterIds.has(id) ? 'checked' : '';
           const icon = renderShiftIcon(String(item?.icon || ''));
           const departmentName = String(item?.department_name || '');
-          return `<label class="settings-assignment-open-shift-chip dashboard-print-department-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste')))}${departmentName ? ` • ${escapeHtml(departmentName)}` : ''}</label>`;
+          return `<label class="settings-assignment-open-shift-chip dashboard-print-department-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste', 'Turno')))}${departmentName ? ` • ${escapeHtml(departmentName)}` : ''}</label>`;
         }).join('');
       }
     }
@@ -1447,8 +1448,8 @@
     const isEnabled = !!(rule?.rotating?.enabled);
     if (employeeModalRotateToggle) {
       employeeModalRotateToggle.textContent = isEnabled
-        ? tr('Disable rotation', 'Desactiver la rotation')
-        : tr('Rotation (+1 day/month)', 'Rotation (+1 j/mois)');
+        ? tr('Disable rotation', 'Desactiver la rotation', 'Disattiva rotazione')
+        : tr('Rotation (+1 day/month)', 'Rotation (+1 j/mois)', 'Rotazione (+1 giorno/mese)');
       employeeModalRotateToggle.classList.toggle('is-active', isEnabled);
     }
     if (!isEnabled) {
@@ -1459,12 +1460,12 @@
     employeeModalRotationPreview.hidden = false;
     const base = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6) : [];
     if (!base.length) {
-      employeeModalRotationPreview.innerHTML = `<span class="crud-modal-subtitle">${tr('No base rest days defined.', 'Aucun jour de repos de base defini.')}</span>`;
+      employeeModalRotationPreview.innerHTML = `<span class="crud-modal-subtitle">${tr('No base rest days defined.', 'Aucun jour de repos de base defini.', 'Nessun giorno di riposo base definito.')}</span>`;
       return;
     }
     const startMonth = String(rule.rotating?.start_month || currentMonthKey());
     const [sy, sm] = startMonth.split('-').map(Number);
-    const monthFmt = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' });
+    const monthFmt = new Intl.DateTimeFormat(isFr ? 'fr-FR' : (isIt ? 'it-IT' : 'en-US'), { month: 'short', year: 'numeric' });
     const items = [];
     for (let i = 0; i <= 3; i++) {
       const d = new Date(sy, sm - 1 + i, 1, 12, 0, 0);
@@ -1648,7 +1649,7 @@
 
     const slots = getOpenSlotEntries();
     if (!slots.length) {
-      openList.innerHTML = '<div class="crud-empty-state">' + tr('No open shifts available for this employee in the selected range.', 'Aucun poste ouvert disponible pour cet employe dans la plage selectionnee.') + '</div>';
+      openList.innerHTML = '<div class="crud-empty-state">' + tr('No open shifts available for this employee in the selected range.', 'Aucun poste ouvert disponible pour cet employe dans la plage selectionnee.', 'Nessun turno aperto disponibile per questo dipendente nel periodo selezionato.') + '</div>';
       return;
     }
 
@@ -1692,7 +1693,7 @@
 
     const slots = getOpenSlotEntries().filter((slot) => selectedOpenSlotKeys.has(slot.key));
     if (!slots.length) {
-      notifyError(tr('No valid open shifts found in the current range.', 'Aucun poste ouvert valide trouve dans la plage courante.'));
+      notifyError(tr('No valid open shifts found in the current range.', 'Aucun poste ouvert valide trouve dans la plage courante.', 'Nessun turno aperto valido trovato nel periodo corrente.'));
       return;
     }
 
@@ -1710,17 +1711,17 @@
       }
       if (assignedCount > 0) {
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.'));
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine', 'Fatto'), tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.', 'Turni aperti selezionati assegnati con successo.'));
         } else {
-          notifySuccess(tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.'));
+          notifySuccess(tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.', 'Turni aperti selezionati assegnati con successo.'));
           location.reload();
         }
       } else {
-        notifyError(tr('No assignable open shifts were selected.', 'Aucun poste ouvert assignable n a ete selectionne.'));
+        notifyError(tr('No assignable open shifts were selected.', 'Aucun poste ouvert assignable n a ete selectionne.', 'Nessun turno aperto assegnabile selezionato.'));
       }
     } catch (error) {
       console.error(error);
-      notifyError(tr('Error assigning selected open shifts.', 'Erreur lors de l\'affectation des postes ouverts selectionnes.'));
+      notifyError(tr('Error assigning selected open shifts.', 'Erreur lors de l\'affectation des postes ouverts selectionnes.', 'Errore durante l\'assegnazione dei turni aperti selezionati.'));
     }
   }
 
@@ -1759,7 +1760,7 @@
     employeeModalWeekly.innerHTML = weekBlocks.map((days, index) => {
       return `
         <article class="settings-assignment-week-card">
-          <strong>${tr('Week', 'Semaine')} ${index + 1}</strong>
+          <strong>${tr('Week', 'Semaine', 'Settimana')} ${index + 1}</strong>
           <div class="settings-assignment-week-days">
             ${days.map((day) => `
               <button
@@ -1767,7 +1768,7 @@
                 class="settings-assignment-week-day ${day.blocked ? 'is-unavailable' : 'is-available'}"
                 data-assignment-modal-week-day="${day.key}"
                 data-assignment-modal-week-day-state="${day.blocked ? 'unavailable' : 'available'}"
-                title="${day.reason ? toRuleReasonLabel(day.reason) : tr('Available', 'Disponible')}"
+                title="${day.reason ? toRuleReasonLabel(day.reason) : tr('Available', 'Disponible', 'Disponibile')}"
               >
                 <small>${day.label}</small>
                 <b>${day.key.slice(8)}</b>
@@ -1796,23 +1797,23 @@
           return true;
         }
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.'));
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine', 'Fatto'), successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.', 'Turno assegnato con successo.'));
         } else {
-          notifySuccess(successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.'));
+          notifySuccess(successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.', 'Turno assegnato con successo.'));
           location.reload();
         }
       } else {
         if (options?.silent) {
           return false;
         }
-        notifyError(tr('Assignment failed: ', 'Echec de l\'affectation : ') + (res?.error || tr('unknown', 'inconnue')));
+        notifyError(tr('Assignment failed: ', 'Echec de l\'affectation : ', 'Assegnazione non riuscita: ') + (res?.error || tr('unknown', 'inconnue', 'sconosciuto')));
       }
     } catch (error) {
       if (options?.silent) {
         throw error;
       }
       console.error(error);
-      notifyError(tr('Error assigning shift.', 'Erreur lors de l\'affectation du poste.'));
+      notifyError(tr('Error assigning shift.', 'Erreur lors de l\'affectation du poste.', 'Errore durante l\'assegnazione del turno.'));
     }
   }
 
@@ -1859,12 +1860,12 @@
     if (employeeModalShiftsSummary) {
       employeeModalShiftsSummary.textContent = total
         ? `${selectedCount}/${total} selected`
-        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.');
+        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.', 'Nessun turno assegnato per il mese selezionato.');
     }
     if (employeeModalShiftsModalTitle) {
       employeeModalShiftsModalTitle.textContent = total
         ? `${selectedCount}/${total} selected`
-        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.');
+        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.', 'Nessun turno assegnato per il mese selezionato.');
     }
 
     if (employeeModalShiftsSelectAllBtn) employeeModalShiftsSelectAllBtn.disabled = total === 0 || selectedCount === total;
@@ -1971,14 +1972,14 @@
     if (!employeeModalSpecialList) return;
     const list = Array.isArray(rule?.special_dates) ? rule.special_dates.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))) : [];
     if (!list.length) {
-      employeeModalSpecialList.innerHTML = '<span class="crud-modal-subtitle">' + tr('No unavailable dates defined.', 'Aucune date indisponible definie.') + '</span>';
+      employeeModalSpecialList.innerHTML = '<span class="crud-modal-subtitle">' + tr('No unavailable dates defined.', 'Aucune date indisponible definie.', 'Nessuna data non disponibile definita.') + '</span>';
       return;
     }
 
     employeeModalSpecialList.innerHTML = list.map((item) => {
       const dateValue = String(item?.date || '');
       const reason = String(item?.reason || 'special');
-      return `<span class="settings-auto-rule-chip" data-date="${dateValue}" data-reason="${reason}">${dateValue} • ${toRuleReasonLabel(reason)}<button type="button" data-assignment-modal-remove-special="${dateValue}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible')}">×</button></span>`;
+      return `<span class="settings-auto-rule-chip" data-date="${dateValue}" data-reason="${reason}">${dateValue} • ${toRuleReasonLabel(reason)}<button type="button" data-assignment-modal-remove-special="${dateValue}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible', 'Rimuovi la data non disponibile')}">×</button></span>`;
     }).join('');
   }
 
@@ -1988,7 +1989,7 @@
     employeeModalSelectedShiftIds = new Set();
     const normalizedMonth = normalizeMonthKey(monthKey) || currentMonthKey();
     if (!rows.length) {
-      employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.') + ` (${normalizedMonth})</div>`;
+      employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.', 'Nessun turno assegnato per il mese selezionato.') + ` (${normalizedMonth})</div>`;
       syncAssignedShiftsToolbar();
       return;
     }
@@ -2024,13 +2025,13 @@
   async function refreshEmployeeAssignedShifts() {
     if (!activeEmployeeUserId || !employeeModalShifts) return;
     const monthKey = getActiveAssignmentsMonthKey();
-    employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('Loading assigned shifts...', 'Chargement des postes assignes...') + '</div>';
+    employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('Loading assigned shifts...', 'Chargement des postes assignes...', 'Caricamento dei turni assegnati...') + '</div>';
     try {
       const rows = await fetchEmployeeAssignmentsByMonth(activeEmployeeUserId, monthKey);
       renderEmployeeShiftList(rows, monthKey);
     } catch (error) {
       console.error(error);
-      employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('Unable to load assigned shifts for selected month.', 'Impossible de charger les postes assignes pour le mois selectionne.') + '</div>';
+      employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('Unable to load assigned shifts for selected month.', 'Impossible de charger les postes assignes pour le mois selectionne.', 'Impossibile caricare i turni assegnati per il mese selezionato.') + '</div>';
     }
   }
 
@@ -2057,7 +2058,7 @@
       employeeModalTitle.textContent = activeEmployeeUserName;
     }
     if (employeeModalSubtitle) {
-      employeeModalSubtitle.textContent = `${tr('Assigned', 'Assigne')}: ${counts.assigned} • ${tr('Sick', 'Maladie')}: ${counts.sick} • ${tr('Vacation', 'Vacances')}: ${counts.vacation} • ${tr('Rest', 'Repos')}: ${counts.rest}`;
+      employeeModalSubtitle.textContent = `${tr('Assigned', 'Assigne', 'Assegnato')}: ${counts.assigned} • ${tr('Sick', 'Maladie', 'Malattia')}: ${counts.sick} • ${tr('Vacation', 'Vacances', 'Vacanza')}: ${counts.vacation} • ${tr('Rest', 'Repos', 'Riposo')}: ${counts.rest}`;
     }
 
     renderEmployeeWeekdays(rule);
@@ -2336,7 +2337,7 @@
         const reassignedCount = parseInt(res.reassigned_count || '0', 10) || 0;
         const overworkedUsers = Array.isArray(res?.overworked_users) ? res.overworked_users : [];
         const overloadSummary = overworkedUsers.slice(0, 2).map((item) => {
-          const employeeName = String(item?.name || tr('Employee', 'Employe')).trim();
+          const employeeName = String(item?.name || tr('Employee', 'Employe', 'Dipendente')).trim();
           const weekLabel = String(item?.week || '').trim();
           const workDays = Number(item?.work_days || 0);
           const restDays = Number(item?.rest_days || 0);
@@ -2349,7 +2350,7 @@
           + (reassignedCount > 0 ? ` Reassigned: ${reassignedCount}.` : '')
           + (skippedByRules > 0 ? ` Skipped by rules: ${skippedByRules}.` : '')
           + (groupsBelowMin > 0 ? ` Shift-days below minimum: ${groupsBelowMin}.` : '')
-          + (overworkedUsers.length > 0 ? ` ${tr('Overloaded employees', 'Employes surcharges')}: ${overworkedUsers.length}.` : '')
+          + (overworkedUsers.length > 0 ? ` ${tr('Overloaded employees', 'Employes surcharges', 'Dipendenti sovraccarichi')}: ${overworkedUsers.length}.` : '')
           + (overloadSummary.length > 0 ? ` ${overloadSummary.join(' | ')}` : '');
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
@@ -2433,8 +2434,8 @@
           : [];
         const message = `Assigned ${res.assigned_count || 0} shifts to employee.`
           + (reassignedCount > 0 ? ` Reassigned: ${reassignedCount}.` : '')
-          + (overloadedUser ? ` ${tr('Employee overload detected', 'Surcharge employee detectee')}: ${Number(overloadedUser?.work_days || 0)}/${Number(overloadedUser?.rest_days || 0)}.` : '')
-          + (replacementSummary.length > 0 ? ` ${tr('Suggested replacements', 'Remplacements suggérés')}: ${replacementSummary.join(', ')}.` : '');
+          + (overloadedUser ? ` ${tr('Employee overload detected', 'Surcharge employee detectee', 'Sovraccarico dipendente rilevato')}: ${Number(overloadedUser?.work_days || 0)}/${Number(overloadedUser?.rest_days || 0)}.` : '')
+          + (replacementSummary.length > 0 ? ` ${tr('Suggested replacements', 'Remplacements suggérés', 'Sostituzioni suggerite')}: ${replacementSummary.join(', ')}.` : '');
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
         } else {
@@ -2583,7 +2584,7 @@
     if (!apiUrl || !window.AppAPI) return;
     const deptId = parseInt(String(departmentId || '0'), 10) || 0;
     if (!deptId) {
-      notifyError(tr('Invalid department.', 'Departement invalide.'));
+      notifyError(tr('Invalid department.', 'Departement invalide.', 'Dipartimento non valido.'));
       return;
     }
     const allowedShiftIds = Array.isArray(shiftIds) && shiftIds.length
@@ -2591,7 +2592,7 @@
       : shiftCatalog.filter((s) => Number(s?.department_id || 0) === deptId && String(s?.kind || '').toLowerCase() === 'work').map((s) => parseInt(String(s?.id || '0'), 10) || 0).filter(Boolean);
 
     if (!allowedShiftIds.length) {
-      notifyError(tr('No work shifts found for this department.', 'Aucun poste de travail trouve pour ce departement.'));
+      notifyError(tr('No work shifts found for this department.', 'Aucun poste de travail trouve pour ce departement.', 'Nessun turno di lavoro trovato per questo dipartimento.'));
       return;
     }
 
@@ -2628,19 +2629,19 @@
         employee_rules: employeeRules,
       });
       if (res?.ok || res?.success) {
-        const msg = `${departmentName || tr('Department', 'Departement')}: ${res.assigned_count || 0} ${tr('shifts assigned', 'postes assignes')}. ${tr('Open remaining', 'Postes ouverts restants')}: ${res.open_remaining || 0}.`;
+        const msg = `${departmentName || tr('Department', 'Departement', 'Dipartimento')}: ${res.assigned_count || 0} ${tr('shifts assigned', 'postes assignes', 'turni assegnati')}. ${tr('Open remaining', 'Postes ouverts restants', 'Turni aperti restanti')}: ${res.open_remaining || 0}.`;
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), msg);
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine', 'Fatto'), msg);
         } else {
           notifySuccess(msg);
           location.reload();
         }
       } else {
-        notifyError(tr('Department auto-assign failed: ', 'Echec affectation departement : ') + (res?.error || tr('unknown', 'inconnue')));
+        notifyError(tr('Department auto-assign failed: ', 'Echec affectation departement : ', 'Assegnazione automatica del dipartimento non riuscita: ') + (res?.error || tr('unknown', 'inconnue', 'sconosciuto')));
       }
     } catch (e) {
       console.error(e);
-      notifyError(tr('Error during department auto-assign.', 'Erreur lors de l\'affectation automatique du departement.'));
+      notifyError(tr('Error during department auto-assign.', 'Erreur lors de l\'affectation automatique du departement.', 'Errore durante l\'assegnazione automatica del dipartimento.'));
     }
   }
 
@@ -2648,7 +2649,7 @@
     if (!apiUrl || !window.AppAPI) return;
     const deptId = parseInt(String(departmentId || '0'), 10) || 0;
     if (!deptId) {
-      notifyError(tr('Invalid department.', 'Departement invalide.'));
+      notifyError(tr('Invalid department.', 'Departement invalide.', 'Dipartimento non valido.'));
       return;
     }
     const allowedShiftIds = Array.isArray(shiftIds) && shiftIds.length
@@ -2656,12 +2657,12 @@
       : shiftCatalog.filter((s) => Number(s?.department_id || 0) === deptId && String(s?.kind || '').toLowerCase() === 'work').map((s) => parseInt(String(s?.id || '0'), 10) || 0).filter(Boolean);
 
     const canClear = feedback?.confirm
-      ? await feedback.confirm(tr(`Clear all assignments for department "${departmentName}"?`, `Effacer les affectations du departement "${departmentName}" ?`), tr('Confirm', 'Confirmer'))
+      ? await feedback.confirm(tr(`Clear all assignments for department "${departmentName}"?`, `Effacer les affectations du departement "${departmentName}" ?`, `Cancellare tutte le assegnazioni del dipartimento "${departmentName}"?`), tr('Confirm', 'Confirmer', 'Conferma'))
       : false;
 
     if (!canClear) {
       if (!feedback?.confirm) {
-        notifyError(tr('Confirmation dialog not available.', 'Fenetre de confirmation non disponible.'));
+        notifyError(tr('Confirmation dialog not available.', 'Fenetre de confirmation non disponible.', 'Finestra di conferma non disponibile.'));
       }
       return;
     }
@@ -2681,19 +2682,19 @@
         range_end: range.end,
       });
       if (res?.ok || res?.success) {
-        const msg = `${departmentName || tr('Department', 'Departement')}: ${res.cleared_count || 0} ${tr('assignment(s) cleared.', 'affectation(s) effacee(s).')}`;
+        const msg = `${departmentName || tr('Department', 'Departement', 'Dipartimento')}: ${res.cleared_count || 0} ${tr('assignment(s) cleared.', 'affectation(s) effacee(s).', 'assegnazione(i) rimossa(e).')}`;
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), msg);
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine', 'Fatto'), msg);
         } else {
           notifySuccess(msg);
           location.reload();
         }
       } else {
-        notifyError(tr('Clear department failed: ', 'Echec effacement departement : ') + (res?.error || tr('unknown', 'inconnue')));
+        notifyError(tr('Clear department failed: ', 'Echec effacement departement : ', 'Cancellazione assegnazioni dipartimento non riuscita: ') + (res?.error || tr('unknown', 'inconnue', 'sconosciuto')));
       }
     } catch (e) {
       console.error(e);
-      notifyError(tr('Error clearing department assignments.', 'Erreur lors de l\'effacement des affectations du departement.'));
+      notifyError(tr('Error clearing department assignments.', 'Erreur lors de l\'effacement des affectations du departement.', 'Errore durante la cancellazione delle assegnazioni del dipartimento.'));
     }
   }
 
@@ -2705,7 +2706,7 @@
       ev.preventDefault();
       if (!isAssignmentPlannerPanelActive()) return;
       runAssignmentPlannerForecast().catch((error) => {
-        notifyError((error && error.message) || tr('Forecast failed.', 'La prevision a echoue.'));
+        notifyError((error && error.message) || tr('Forecast failed.', 'La prevision a echoue.', 'Previsione non riuscita.'));
       });
       return;
     }
@@ -2714,10 +2715,10 @@
     if (plannerRunBtn) {
       ev.preventDefault();
       if (!isAssignmentPlannerPanelActive()) return;
-      const confirmed = window.confirm(tr('Run automatic assignment with current planner parameters?', 'Lancer l\'affectation automatique avec les parametres actuels ?'));
+      const confirmed = window.confirm(tr('Run automatic assignment with current planner parameters?', 'Lancer l\'affectation automatique avec les parametres actuels ?', 'Avviare l\'assegnazione automatica con i parametri attuali del pianificatore?'));
       if (!confirmed) return;
       runAssignmentPlannerAutoAssign().catch((error) => {
-        notifyError((error && error.message) || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.'));
+        notifyError((error && error.message) || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.', 'Assegnazione automatica non riuscita.'));
       });
       return;
     }
@@ -2800,7 +2801,7 @@
     if (deptAssignBtn) {
       ev.preventDefault();
       const deptId = parseInt(String(deptAssignBtn.getAttribute('data-dept-id') || '0'), 10) || 0;
-      const deptName = String(deptAssignBtn.getAttribute('data-dept-name') || tr('Department', 'Departement'));
+      const deptName = String(deptAssignBtn.getAttribute('data-dept-name') || tr('Department', 'Departement', 'Dipartimento'));
       const deptShiftIds = getDeptShiftIds(deptAssignBtn);
       autoAssignForDepartment(deptId, deptName, deptShiftIds);
       return;
@@ -2810,7 +2811,7 @@
     if (deptClearBtn) {
       ev.preventDefault();
       const deptId = parseInt(String(deptClearBtn.getAttribute('data-dept-id') || '0'), 10) || 0;
-      const deptName = String(deptClearBtn.getAttribute('data-dept-name') || tr('Department', 'Departement'));
+      const deptName = String(deptClearBtn.getAttribute('data-dept-name') || tr('Department', 'Departement', 'Dipartimento'));
       const deptShiftIds = getDeptShiftIds(deptClearBtn);
       clearAssignmentsForDepartment(deptId, deptName, deptShiftIds);
       return;

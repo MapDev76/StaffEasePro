@@ -134,14 +134,15 @@
   function getDepartmentDropdownLabel(select) {
     const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const isFr = locale.startsWith('fr');
+    const isIt = locale.startsWith('it');
     const selected = Array.from(select.selectedOptions || []).map((opt) => String(opt.textContent || '').trim()).filter((v) => v !== '');
     if (!selected.length) {
-      return isFr ? 'Selectionner departement(s)' : 'Select department(s)';
+      return isFr ? 'Selectionner departement(s)' : (isIt ? 'Seleziona dipartimento/i' : 'Select department(s)');
     }
     if (selected.length === 1) {
       return selected[0];
     }
-    return isFr ? `${selected.length} departements selectionnes` : `${selected.length} departments selected`;
+    return isFr ? `${selected.length} departements selectionnes` : (isIt ? `${selected.length} dipartimenti selezionati` : `${selected.length} departments selected`);
   }
 
   function syncDepartmentDropdown(select) {
@@ -271,7 +272,8 @@
     if (Array.isArray(departmentIds) && departmentIds.length > 0) return true;
     const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const isFr = locale.startsWith('fr');
-    notifyError(isFr ? 'Selectionnez au moins un departement pour le responsable de departement.' : 'Select at least one department for a department manager.');
+    const isIt = locale.startsWith('it');
+    notifyError(isFr ? 'Selectionnez au moins un departement pour le responsable de departement.' : (isIt ? 'Seleziona almeno un dipartimento per il capo dipartimento.' : 'Select at least one department for a department manager.'));
     return false;
   }
 
@@ -355,8 +357,9 @@
     const id = parseInt(card.dataset.userId || '0', 10); if (!id) return;
     const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const isFr = locale.startsWith('fr');
-    const tr = (en, fr) => (isFr ? fr : en);
-    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this user?', 'Supprimer cet utilisateur ?'), tr('Confirm deletion', 'Confirmer la suppression')) : false;
+    const isIt = locale.startsWith('it');
+    const tr = (en, fr, it) => (isFr ? fr : (isIt && it ? it : en));
+    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this user?', 'Supprimer cet utilisateur ?', 'Eliminare questo utente?'), tr('Confirm deletion', 'Confirmer la suppression', 'Conferma eliminazione')) : false;
     if (!feedback?.confirm) {
       notifyError('Confirmation dialog is not available.');
       return;

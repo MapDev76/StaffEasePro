@@ -137,8 +137,9 @@
 
     const _locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const _isFr = _locale.startsWith('fr');
-    const _tr = (en, fr) => (_isFr ? fr : en);
-    const confirmed = await feedback.confirm(_tr('Delete this company?', 'Supprimer cette entreprise ?'), _tr('Confirm deletion', 'Confirmer la suppression'));
+    const _isIt = _locale.startsWith('it');
+    const _tr = (en, fr, it) => (_isFr ? fr : (_isIt && it ? it : en));
+    const confirmed = await feedback.confirm(_tr('Delete this company?', 'Supprimer cette entreprise ?', 'Eliminare questa azienda?'), _tr('Confirm deletion', 'Confirmer la suppression', 'Conferma eliminazione'));
     if (!confirmed) return;
 
     try {
