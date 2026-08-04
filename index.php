@@ -18,7 +18,7 @@ $pageTitle = $pageTitle ?? 'StaffEase Pro';
 $viewFile = $viewFile ?? $targetFile;
 $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
-$isDashboardRoute = $route === 'dashboard';
+$isDashboardRoute = in_array($route, ['dashboard', 'calendar'], true);
 $isHomeRoute = $route === 'home';
 $isCommercialRoute = $route === 'commercial';
 $isLoginRoute = $route === 'login';

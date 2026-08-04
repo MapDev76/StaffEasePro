@@ -66,12 +66,15 @@ if ($role === 'admin' && (int) ($companyId ?? 0) <= 0) {
     }
 }
 
+$requestedRoute = $_GET['route'] ?? 'dashboard';
+$dashboardPageLabel = $requestedRoute === 'calendar' ? t('common.calendar') : t('common.dashboard');
+
 $pageTitle = match ($role) {
-    'super_admin' => t('common.dashboard') . ' - ' . t('roles.super_admin'),
-    'admin' => t('common.dashboard') . ' - ' . t('roles.admin'),
-    'department_manager' => t('common.dashboard') . ' - ' . t('roles.department_manager'),
-    'employee' => t('common.dashboard') . ' - ' . t('roles.employee'),
-    default => t('common.dashboard'),
+    'super_admin' => $dashboardPageLabel . ' - ' . t('roles.super_admin'),
+    'admin' => $dashboardPageLabel . ' - ' . t('roles.admin'),
+    'department_manager' => $dashboardPageLabel . ' - ' . t('roles.department_manager'),
+    'employee' => $dashboardPageLabel . ' - ' . t('roles.employee'),
+    default => $dashboardPageLabel,
 };
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';

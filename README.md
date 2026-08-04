@@ -129,6 +129,7 @@ Routes utiles:
 - `?route=home`
 - `?route=login`
 - `?route=dashboard`
+- `?route=calendar`
 - `?route=my-space`
 - `?route=legal`
 - `?route=contacts`
@@ -344,4 +345,3 @@ Puis connectez-vous avec:
 2. Restaurer backup DB si migration destructrice
 3. Redemarrer services web/PHP
 4. Verifier routes critiques
-
