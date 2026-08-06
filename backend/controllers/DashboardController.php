@@ -27,6 +27,12 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 
+$dashboardShowOnboardingTour = false;
+if (!empty($_SESSION['show_onboarding_tour'])) {
+    $dashboardShowOnboardingTour = true;
+    unset($_SESSION['show_onboarding_tour']);
+}
+
 $roleLabels = [
     'super_admin' => t('roles.super_admin'),
     'admin' => t('roles.admin'),
@@ -878,3 +884,53 @@ $dashboardModalDocumentRequests = $modalDocumentRequests;
 $dashboardModalOpenShiftChoices = $modalOpenShiftChoices;
 $moduleRows['recent_connections'] = $recentConnections;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);
+
+$dashboardOnboardingSteps = [];
+if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+    $dashboardOnboardingSteps = [
+        [
+            'selector' => null,
+            'title' => t('onboarding.welcome_title'),
+            'body' => t('onboarding.welcome_body'),
+        ],
+        [
+            'selector' => '[data-modal-target="modal-settings"][data-modal-entity="settings"]',
+            'title' => t('onboarding.step_settings_title'),
+            'body' => t('onboarding.step_settings_body'),
+        ],
+        [
+            'selector' => '[data-dept-create-row]',
+            'openSettingsTab' => 'departments',
+            'title' => t('onboarding.step_departments_title'),
+            'body' => t('onboarding.step_departments_body'),
+        ],
+        [
+            'selector' => '[data-user-create-row]',
+            'openSettingsTab' => 'users',
+            'title' => t('onboarding.step_users_title'),
+            'body' => t('onboarding.step_users_body'),
+        ],
+        [
+            'selector' => '[data-shift-create-row]',
+            'openSettingsTab' => 'shifts',
+            'title' => t('onboarding.step_shifts_title'),
+            'body' => t('onboarding.step_shifts_body'),
+        ],
+        [
+            'selector' => '[data-dashboard-calendar-shell]',
+            'closeSettings' => true,
+            'title' => t('onboarding.step_calendar_title'),
+            'body' => t('onboarding.step_calendar_body'),
+        ],
+        [
+            'selector' => '[data-sidebar-department-toggle]',
+            'title' => t('onboarding.step_reception_title'),
+            'body' => t('onboarding.step_reception_body'),
+        ],
+        [
+            'selector' => '[data-onboarding-tour-relaunch]',
+            'title' => t('onboarding.step_replay_title'),
+            'body' => t('onboarding.step_replay_body'),
+        ],
+    ];
+}

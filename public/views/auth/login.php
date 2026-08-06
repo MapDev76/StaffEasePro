@@ -34,4 +34,6 @@ $basePath = $basePath ?? (function () {
             <button type="submit"><?php echo e(t('auth.sign_in')); ?></button>
         </div>
     </form>
+
+    <p><?php echo e(t('signup.no_account_prefix')); ?> <a href="<?php echo appUrl('register'); ?>"><?php echo e(t('signup.home_cta')); ?></a></p>
 </div>

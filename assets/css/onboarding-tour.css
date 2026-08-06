@@ -1,0 +1,71 @@
+.onboarding-tour-highlight {
+    position: fixed;
+    border-radius: 14px;
+    box-shadow: 0 0 0 6000px rgba(10, 12, 16, 0.55);
+    pointer-events: none;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+    z-index: 10598;
+}
+
+.onboarding-tour-tooltip {
+    position: fixed;
+    z-index: 10600;
+    width: min(340px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 1rem;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #122b4b 0, #081a34 100%);
+    border-top: 1px solid rgba(206, 226, 255, 0.22);
+    border-left: 1px solid rgba(206, 226, 255, 0.18);
+    box-shadow: 0 38px 85px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    color: #fff;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.onboarding-tour-step-badge {
+    width: 28px;
+    height: 28px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #2b2107;
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+
+.onboarding-tour-tooltip-title {
+    margin: 0;
+    font-size: 1.02rem;
+    color: #fff;
+}
+
+.onboarding-tour-tooltip-body {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.onboarding-tour-progress {
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.onboarding-tour-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.onboarding-tour-relaunch-btn {
+    font-weight: 800;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--color-text);
+}

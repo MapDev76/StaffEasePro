@@ -22,16 +22,17 @@ $isDashboardRoute = $route === 'dashboard';
 $isHomeRoute = $route === 'home';
 $isCommercialRoute = $route === 'commercial';
 $isLoginRoute = $route === 'login';
+$isRegisterRoute = $route === 'register';
 $isMySpaceRoute = $route === 'my-space';
 $isLegalRoute = $route === 'legal';
 $isContactsRoute = $route === 'contacts';
 $isCreatorRoute = $route === 'creator';
 $isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute;
-$isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isStaticInfoRoute;
+$isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isRegisterRoute || $isStaticInfoRoute;
 $locale = appLocale();
 $shouldShowLoadingOverlay = $isDashboardRoute || $isMySpaceRoute;
 $requiresApiClient = ($isDashboardRoute || $isMySpaceRoute);
-$hasFlashUi = $flashSuccess !== null || $flashError !== null || (($loginError ?? null) !== null);
+$hasFlashUi = $flashSuccess !== null || $flashError !== null || (($loginError ?? null) !== null) || !empty($registerErrors ?? []);
 $useFullAppStyles = $isDashboardRoute || $isMySpaceRoute;
 // Compact dashboard mode: removes padding and some UI elements for admins/managers to show more content.
 // Super admins get the same compact, admin-like view once they drill into a specific company (settings_company_id).
@@ -53,6 +54,9 @@ if ($isCommercialRoute) {
 if ($isLoginRoute) {
         $bodyClasses[] = 'route-login';
 }
+if ($isRegisterRoute) {
+        $bodyClasses[] = 'route-register';
+}
 if ($isMySpaceRoute) {
         $bodyClasses[] = 'route-my-space';
 }
@@ -73,126 +77,114 @@ $routeMetaByLocale = [
                 'home' => [
                         'title' => 'StaffEase Pro | Gestione Turni, Presenze e Documenti HR',
                         'description' => 'StaffEase Pro e una piattaforma cloud per pianificazione turni, rilevazione presenze, firme digitali e gestione documenti aziendali.',
-                        'keywords' => 'StaffEase Pro, StaffEasePro, gestione turni, software presenze, firma digitale dipendenti, gestione personale',
                 ],
                 'commercial' => [
                         'title' => 'StaffEase Pro | Soluzione Gestionale per Team e Hotel',
                         'description' => 'Scopri StaffEase Pro: automazione turni, controllo presenze, documenti e comunicazione interna per team operativi.',
-                        'keywords' => 'software turni hotel, pianificazione staff, controllo presenze, gestione documenti HR',
                 ],
                 'contacts' => [
                         'title' => 'StaffEase Pro | Contatti e Demo',
                         'description' => 'Contatta StaffEase Pro per demo, supporto tecnico e attivazione account aziendale.',
-                        'keywords' => 'contatti StaffEase Pro, demo software gestione personale, supporto StaffEase Pro',
                 ],
                 'legal' => [
                         'title' => 'StaffEase Pro | Informazioni Legali',
                         'description' => 'Note legali e informazioni regolamentari relative a StaffEase Pro.',
-                        'keywords' => 'note legali StaffEase Pro, policy piattaforma',
                 ],
                 'creator' => [
                         'title' => 'StaffEase Pro | Creatore del Progetto',
                         'description' => 'Scopri il creatore di StaffEase Pro e la visione della piattaforma per la gestione operativa del personale.',
-                        'keywords' => 'creatore StaffEase Pro, storia progetto StaffEase Pro',
                 ],
                 'login' => [
                         'title' => 'StaffEase Pro | Accesso Sicuro',
                         'description' => 'Accedi in modo sicuro alla tua area StaffEase Pro per gestire team, presenze e documenti.',
-                        'keywords' => 'login StaffEase Pro, accesso area personale',
+                ],
+                'register' => [
+                        'title' => 'StaffEase Pro | Crea il Tuo Account Gratuito',
+                        'description' => 'Crea gratuitamente la tua azienda su StaffEase Pro e inizia subito a pianificare turni, presenze e documenti.',
                 ],
                 'dashboard' => [
                         'title' => 'StaffEase Pro | Dashboard Operativa',
                         'description' => 'Dashboard StaffEase Pro per coordinare reparti, turni, presenze e documenti in un unico pannello.',
-                        'keywords' => 'dashboard gestione personale, turni e presenze, pannello HR',
                 ],
                 'my-space' => [
                         'title' => 'StaffEase Pro | Spazio Dipendente',
                         'description' => 'Area dipendente per visualizzare turni, registrare presenza e gestire documenti con firma digitale.',
-                        'keywords' => 'area dipendente, firma digitale presenze, turni dipendente',
                 ],
         ],
         'fr' => [
                 'home' => [
                         'title' => 'StaffEase Pro | Planning, Pointage et Documents RH',
                         'description' => 'StaffEase Pro est une application cloud de gestion du personnel: planning des equipes, pointage, signatures numeriques et documents RH.',
-                        'keywords' => 'StaffEase Pro, StaffEasePro, logiciel planning equipes, pointage employes, gestion RH',
                 ],
                 'commercial' => [
                         'title' => 'StaffEase Pro | Solution de Gestion des Equipes',
                         'description' => 'Decouvrez StaffEase Pro: automatisation des plannings, suivi des presences et gestion documentaire pour vos operations.',
-                        'keywords' => 'logiciel planning hotel, gestion equipe, pointage entreprise, documents RH',
                 ],
                 'contacts' => [
                         'title' => 'StaffEase Pro | Contact et Demo',
                         'description' => 'Contactez StaffEase Pro pour une demo, un accompagnement technique et la creation de compte.',
-                        'keywords' => 'contact StaffEase Pro, demo logiciel RH',
                 ],
                 'legal' => [
                         'title' => 'StaffEase Pro | Mentions Legales',
                         'description' => 'Mentions legales et informations reglementaires de StaffEase Pro.',
-                        'keywords' => 'mentions legales StaffEase Pro, conformite plateforme',
                 ],
                 'creator' => [
                         'title' => 'StaffEase Pro | Createur',
                         'description' => 'Decouvrez le createur de StaffEase Pro et la vision produit pour la gestion operationnelle des equipes.',
-                        'keywords' => 'createur StaffEase Pro, projet StaffEase Pro',
                 ],
                 'login' => [
                         'title' => 'StaffEase Pro | Connexion Securisee',
                         'description' => 'Connexion securisee a votre espace StaffEase Pro pour piloter planning, presences et documents.',
-                        'keywords' => 'connexion StaffEase Pro, espace personnel',
+                ],
+                'register' => [
+                        'title' => 'StaffEase Pro | Creez Votre Compte Gratuit',
+                        'description' => 'Creez gratuitement votre entreprise sur StaffEase Pro et commencez tout de suite a gerer plannings, presences et documents.',
                 ],
                 'dashboard' => [
                         'title' => 'StaffEase Pro | Tableau de Bord',
                         'description' => 'Tableau de bord StaffEase Pro pour gerer equipes, services, plannings, presences et documents au meme endroit.',
-                        'keywords' => 'tableau de bord RH, gestion plannings, suivi presences',
                 ],
                 'my-space' => [
                         'title' => 'StaffEase Pro | Espace Employe',
                         'description' => 'Espace employe pour consulter les plannings, signer la presence et suivre les documents.',
-                        'keywords' => 'espace employe, pointage signature, planning personnel',
                 ],
         ],
         'en' => [
                 'home' => [
                         'title' => 'StaffEase Pro | Shift Scheduling, Attendance and HR Documents',
                         'description' => 'StaffEase Pro is a workforce management app for shift scheduling, attendance tracking, digital signatures and internal documents.',
-                        'keywords' => 'StaffEase Pro, StaffEasePro, workforce management app, shift scheduling software, attendance tracking',
                 ],
                 'commercial' => [
                         'title' => 'StaffEase Pro | Workforce Operations Platform',
                         'description' => 'Explore StaffEase Pro features for shift automation, attendance control, document workflows and team communication.',
-                        'keywords' => 'workforce software, staff scheduling, attendance control, hr document management',
                 ],
                 'contacts' => [
                         'title' => 'StaffEase Pro | Contact and Demo',
                         'description' => 'Get in touch with StaffEase Pro for product demos, onboarding and technical support.',
-                        'keywords' => 'StaffEase Pro contact, workforce software demo',
                 ],
                 'legal' => [
                         'title' => 'StaffEase Pro | Legal Information',
                         'description' => 'Legal notices and compliance information for StaffEase Pro.',
-                        'keywords' => 'StaffEase Pro legal, compliance',
                 ],
                 'creator' => [
                         'title' => 'StaffEase Pro | Project Creator',
                         'description' => 'Meet the creator of StaffEase Pro and discover the platform mission.',
-                        'keywords' => 'StaffEase Pro creator, product vision',
                 ],
                 'login' => [
                         'title' => 'StaffEase Pro | Secure Login',
                         'description' => 'Secure login to your StaffEase Pro workspace.',
-                        'keywords' => 'StaffEase Pro login, employee platform login',
+                ],
+                'register' => [
+                        'title' => 'StaffEase Pro | Create Your Free Account',
+                        'description' => 'Create your company on StaffEase Pro for free and start managing shifts, attendance and documents right away.',
                 ],
                 'dashboard' => [
                         'title' => 'StaffEase Pro | Operations Dashboard',
                         'description' => 'Use the StaffEase Pro dashboard to manage teams, departments, shifts, attendance and documents.',
-                        'keywords' => 'operations dashboard, team scheduling, attendance dashboard',
                 ],
                 'my-space' => [
                         'title' => 'StaffEase Pro | Employee Space',
                         'description' => 'Employee portal for schedules, attendance signature and personal documents.',
-                        'keywords' => 'employee portal, attendance signature, shift information',
                 ],
         ],
 ];
@@ -202,12 +194,10 @@ $routeMeta = $routeMetaByLocale[$localeCode] ?? $routeMetaByLocale['en'];
 $resolvedMeta = $routeMeta[$route] ?? [
         'title' => $pageTitle,
         'description' => 'StaffEase Pro workforce management application.',
-        'keywords' => 'StaffEase Pro, workforce management',
 ];
 
 $pageTitle = $pageTitle !== 'StaffEase Pro' ? $pageTitle : $resolvedMeta['title'];
 $metaDescription = $resolvedMeta['description'];
-$metaKeywords = $resolvedMeta['keywords'] ?? 'StaffEase Pro, workforce management';
 $canonicalPath = appCurrentUrl(['lang' => null]);
 $requestScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $requestHost = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
@@ -223,6 +213,7 @@ $publicCanonicalByRoute = [
         'contacts' => '/contacts',
         'legal' => '/legal',
         'creator' => '/creator',
+        'register' => '/register',
 ];
 if (isset($publicCanonicalByRoute[$route])) {
         $canonicalUrl = rtrim($siteBaseUrl, '/') . $publicCanonicalByRoute[$route];
@@ -272,7 +263,6 @@ $commercialVideosVersion = (string) (@filemtime($commercialVideosFile) ?: time()
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <meta name="description" content="<?php echo e($metaDescription); ?>">
-                <meta name="keywords" content="<?php echo e($metaKeywords); ?>">
                 <meta name="robots" content="<?php echo e($robotsContent); ?>">
                 <meta name="application-name" content="StaffEase Pro">
                 <link rel="icon" href="<?php echo $basePath; ?>/favicon.ico" type="image/x-icon" sizes="any">
@@ -418,8 +408,20 @@ require $viewFile;
                 'role' => (string) (currentUser()['role'] ?? ''),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        window.DashboardOnboarding = <?php echo json_encode([
+                'autoStart' => (bool) ($dashboardShowOnboardingTour ?? false),
+                'steps' => $dashboardOnboardingSteps ?? [],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        window.DashboardOnboardingLabels = <?php echo json_encode([
+                'buttonNext' => t('onboarding.button_next'),
+                'buttonBack' => t('onboarding.button_back'),
+                'buttonSkip' => t('onboarding.button_skip'),
+                'buttonFinish' => t('onboarding.button_finish'),
+                'stepProgress' => t('onboarding.step_progress'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/onboarding-tour.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/onboarding-tour.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>

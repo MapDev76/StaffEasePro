@@ -10,6 +10,7 @@ $routes = [
     'creator' => realpath(__DIR__ . '/../public/views/creator.php'),
     'login' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
     'logout' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
+    'register' => realpath(__DIR__ . '/../backend/controllers/RegisterController.php'),
     'dashboard' => realpath(__DIR__ . '/../backend/controllers/DashboardController.php'),
     'api-dashboard' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-companies' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),

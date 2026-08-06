@@ -113,4 +113,8 @@ $commercialVideos = getCommercialVideos();
             <h2><?php echo e($commercialSeoCopy['title']); ?></h2>
             <p><?php echo e($commercialSeoCopy['body']); ?></p>
         </section>
+
+        <p class="home-commercial-link-wrap">
+            <a class="admin-action-link" href="<?php echo e(appUrl('register')); ?>"><?php echo e(t('signup.home_cta')); ?></a>
+        </p>
 </article>

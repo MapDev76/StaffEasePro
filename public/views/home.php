@@ -91,7 +91,8 @@ $homeSeoCopy = $homeSeoCopyByLocale[$localeCode] ?? $homeSeoCopyByLocale['en'];
 
 		<aside class="simple-div home-video-teaser">
 			<p class="home-commercial-link-wrap">
-				<a class="admin-action-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial_cta')); ?></a>
+				<a class="admin-action-link" href="<?php echo e(appUrl('register')); ?>"><?php echo e(t('signup.home_cta')); ?></a>
+				<a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial_cta')); ?></a>
 			</p>
 		</aside>
 

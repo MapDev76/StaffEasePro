@@ -1096,3 +1096,88 @@ function documentThumbnailDataUrl(array $document, int $maxWidth = 220, int $max
         return null;
     }
 }
+
+function csrfToken(): string
+{
+    startAppSession();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCsrfToken(?string $token): bool
+{
+    startAppSession();
+    $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
+
+    return $sessionToken !== '' && is_string($token) && hash_equals($sessionToken, $token);
+}
+
+function newSignupCaptchaChallenge(): array
+{
+    startAppSession();
+    $a = random_int(1, 9);
+    $b = random_int(1, 9);
+    $_SESSION['signup_captcha_a'] = $a;
+    $_SESSION['signup_captcha_b'] = $b;
+    $_SESSION['signup_captcha_answer'] = $a + $b;
+
+    return ['a' => $a, 'b' => $b];
+}
+
+function verifySignupCaptcha(mixed $submitted): bool
+{
+    $expected = $_SESSION['signup_captcha_answer'] ?? null;
+
+    return $expected !== null && (string) $expected === trim((string) $submitted);
+}
+
+function ensureSignupThrottleSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS signup_attempts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_signup_attempts_ip_created (ip_address, created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    } catch (Throwable $e) {
+        // Keep the app running even if the current database user cannot create tables.
+    }
+
+    $initialized = true;
+}
+
+function recentSignupAttemptCount(PDO $pdo, string $ip, int $windowMinutes = 60): int
+{
+    try {
+        $statement = $pdo->prepare(
+            'SELECT COUNT(*) FROM signup_attempts WHERE ip_address = :ip AND created_at >= DATE_SUB(NOW(), INTERVAL :mins MINUTE)'
+        );
+        $statement->bindValue(':ip', $ip);
+        $statement->bindValue(':mins', $windowMinutes, PDO::PARAM_INT);
+        $statement->execute();
+
+        return (int) $statement->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+function recordSignupAttempt(PDO $pdo, string $ip): void
+{
+    try {
+        $pdo->prepare('INSERT INTO signup_attempts (ip_address) VALUES (:ip)')->execute(['ip' => $ip]);
+    } catch (Throwable $e) {
+        // Ignore throttle-tracking failures so signup can still proceed.
+    }
+}

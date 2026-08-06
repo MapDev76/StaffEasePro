@@ -15,7 +15,7 @@
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
 $locale = appLocale();
-$isPublicPage = in_array($route, ['home', 'login'], true);
+$isPublicPage = in_array($route, ['home', 'login', 'register'], true);
 $currentRole = $currentUser['role'] ?? null;
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
@@ -112,7 +112,7 @@ if (!$isPublicPage && $currentUser !== null) {
 
 $rightIcons = [];
 $logoutIcon = null;
-$isPublicInfoRoute = in_array($route, ['home', 'commercial', 'legal', 'contacts', 'creator', 'login'], true);
+$isPublicInfoRoute = in_array($route, ['home', 'commercial', 'legal', 'contacts', 'creator', 'login', 'register'], true);
 if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',
@@ -121,7 +121,7 @@ if ($route === 'home') {
         'icon' => 'log-in.svg',
         'alt' => t('common.login'),
     ];
-} elseif ($route === 'login') {
+} elseif ($route === 'login' || $route === 'register') {
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('home'),
@@ -155,6 +155,13 @@ if ($route === 'home') {
             'icon' => 'print-outline.svg',
             'alt' => t('common.print'),
         ];
+        if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+            $rightIcons[] = [
+                'type' => 'tour',
+                'title' => t('onboarding.relaunch_button_label'),
+                'alt' => t('onboarding.relaunch_button_label'),
+            ];
+        }
 
     } else {
         if ($route === 'my-space') {
@@ -198,10 +205,6 @@ if ($route === 'home') {
 $mobileMenuItems = [];
 if ($isPublicInfoRoute) {
     $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('home'), 'label' => t('common.home')];
-    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('commercial'), 'label' => t('common.commercial')];
-    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('contacts'), 'label' => t('common.contacts')];
-    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('legal'), 'label' => t('common.legal_mentions')];
-    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('creator'), 'label' => t('common.app_creator')];
 }
 
 $isLeadershipDashboard = $route === 'dashboard' && $currentUser !== null
@@ -242,6 +245,10 @@ if ($isLeadershipDashboard) {
         'label' => t('common.print'),
         'target' => 'modal-print',
         'entity' => '',
+    ];
+    $mobileMenuItems[] = [
+        'type' => 'tour',
+        'label' => t('onboarding.relaunch_button_label'),
     ];
 } else {
     foreach ($rightIcons as $iconItem) {
@@ -331,7 +338,9 @@ if (is_array($logoutIcon)) {
                 </button>
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
-                        <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
+                        <?php if (($iconItem['type'] ?? 'link') === 'tour'): ?>
+                            <button type="button" class="site-icon-btn onboarding-tour-relaunch-btn" data-onboarding-tour-relaunch title="<?php echo e($iconItem['title']); ?>" aria-label="<?php echo e($iconItem['title']); ?>">?</button>
+                        <?php elseif (($iconItem['type'] ?? 'link') === 'button'): ?>
                             <button
                                 type="button"
                                 class="site-icon-btn"
@@ -389,7 +398,9 @@ if (is_array($logoutIcon)) {
             </div>
             <div class="site-mobile-drawer-links">
                 <?php foreach ($mobileMenuItems as $item): ?>
-                    <?php if (($item['type'] ?? 'link') === 'button' && !empty($item['target'])): ?>
+                    <?php if (($item['type'] ?? 'link') === 'tour'): ?>
+                        <button type="button" class="site-mobile-drawer-link" data-onboarding-tour-relaunch data-site-menu-close><?php echo e($item['label']); ?></button>
+                    <?php elseif (($item['type'] ?? 'link') === 'button' && !empty($item['target'])): ?>
                         <button
                             type="button"
                             class="site-mobile-drawer-link"
@@ -403,9 +414,14 @@ if (is_array($logoutIcon)) {
                         <a class="site-mobile-drawer-link" href="<?php echo e($item['href']); ?>" data-site-menu-close><?php echo e($item['label']); ?></a>
                     <?php endif; ?>
                 <?php endforeach; ?>
-                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'it'])); ?>" data-site-menu-close>Italiano</a>
-                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" data-site-menu-close>English</a>
-                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" data-site-menu-close>Francais</a>
+                <details class="site-mobile-drawer-lang">
+                    <summary class="site-mobile-drawer-link site-mobile-drawer-lang-trigger"><?php echo e(t('common.language')); ?></summary>
+                    <div class="site-mobile-drawer-lang-menu">
+                        <a class="site-mobile-drawer-link site-mobile-drawer-lang-link <?php echo $locale === 'it' ? 'is-active' : ''; ?>" href="<?php echo e(appCurrentUrl(['lang' => 'it'])); ?>" data-site-menu-close>Italiano</a>
+                        <a class="site-mobile-drawer-link site-mobile-drawer-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>" href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" data-site-menu-close>English</a>
+                        <a class="site-mobile-drawer-link site-mobile-drawer-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" data-site-menu-close>Francais</a>
+                    </div>
+                </details>
             </div>
         </aside>
     </div>
