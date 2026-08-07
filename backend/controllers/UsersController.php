@@ -129,12 +129,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setFlash('error', t('flash.password_required_create'));
                 usersModalRedirect();
             }
+            $passwordStrengthError = validatePasswordStrength($password);
+            if ($passwordStrengthError !== null) {
+                setFlash('error', $passwordStrengthError);
+                usersModalRedirect();
+            }
 
             $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
             $userModel->create($payload);
             usersModalRedirect();
         } elseif ($action === 'update' && $id > 0) {
             if ($password !== '') {
+                $passwordStrengthError = validatePasswordStrength($password);
+                if ($passwordStrengthError !== null) {
+                    setFlash('error', $passwordStrengthError);
+                    usersModalRedirect();
+                }
                 $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
             }
             $userModel->update($id, $payload);

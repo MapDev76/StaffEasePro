@@ -55,8 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $registerErrors[] = t('signup.error_required_fields');
     } elseif (!filter_var($formValues['email'], FILTER_VALIDATE_EMAIL)) {
         $registerErrors[] = t('signup.error_invalid_email');
-    } elseif (strlen($password) < 8) {
-        $registerErrors[] = t('signup.error_password_too_short');
+    } elseif (($passwordStrengthError = validatePasswordStrength($password)) !== null) {
+        $registerErrors[] = $passwordStrengthError;
     } elseif ($password !== $passwordConfirm) {
         $registerErrors[] = t('signup.error_password_mismatch');
     } elseif ($userModel->findByEmail($formValues['email']) !== null) {

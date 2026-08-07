@@ -83,6 +83,15 @@ try {
             break;
 
         case 'create':
+            $requestedPassword = (string) ($input['password'] ?? '');
+            if ($requestedPassword === '') {
+                jsonResponse(['ok' => false, 'error' => t('flash.password_required_create')], 400);
+            }
+            $passwordStrengthError = validatePasswordStrength($requestedPassword);
+            if ($passwordStrengthError !== null) {
+                jsonResponse(['ok' => false, 'error' => $passwordStrengthError], 400);
+            }
+
             $departmentIds = $normalizeDepartmentIds($input['department_ids'] ?? []);
             $departmentId = $input['department_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
@@ -141,7 +150,7 @@ try {
                 'last_name' => trim((string) ($input['last_name'] ?? '')),
                 'email' => trim((string) ($input['email'] ?? '')),
                 'phone' => $input['phone'] ?? null,
-                'password' => password_hash($input['password'] ?? 'changeme', PASSWORD_DEFAULT),
+                'password' => password_hash($requestedPassword, PASSWORD_DEFAULT),
                 'role' => $userRole,
                 'status' => $input['status'] ?? 'active',
             ];
@@ -233,6 +242,10 @@ try {
                 'status' => $input['status'] ?? 'active',
             ];
             if (!empty($input['password'])) {
+                $passwordStrengthError = validatePasswordStrength((string) $input['password']);
+                if ($passwordStrengthError !== null) {
+                    jsonResponse(['ok' => false, 'error' => $passwordStrengthError], 400);
+                }
                 $payload['password'] = password_hash($input['password'], PASSWORD_DEFAULT);
             }
             if ($isAdmin && !empty($departmentId)) {

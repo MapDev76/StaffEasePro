@@ -418,6 +418,26 @@ function saveCommercialVideos(array $videos): array
     return $normalized;
 }
 
+/**
+ * Returns null when the password meets the app's minimum strength policy
+ * (at least 8 characters, at least one letter and one digit), or a
+ * translated error message describing the first unmet requirement.
+ */
+function validatePasswordStrength(string $password): ?string
+{
+    if (strlen($password) < 8) {
+        return t('auth.password_too_short');
+    }
+    if (!preg_match('/[A-Za-z]/', $password)) {
+        return t('auth.password_needs_letter');
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return t('auth.password_needs_number');
+    }
+
+    return null;
+}
+
 function resolveUserCompanyId(PDO $pdo, array $user): int
 {
     $companyId = (int) ($user['company_id'] ?? 0);

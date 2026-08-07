@@ -89,6 +89,35 @@ if ($action === 'delete_connection') {
     jsonResponse(['success' => true]);
 }
 
+if ($action === 'change_password') {
+    $currentUserId = (int) ($user['id'] ?? 0);
+    $currentPassword = (string) ($input['current_password'] ?? '');
+    $newPassword = (string) ($input['new_password'] ?? '');
+    $newPasswordConfirm = (string) ($input['new_password_confirm'] ?? '');
+
+    $currentUserRow = $userModel->findById($currentUserId);
+    if (!$currentUserRow || !password_verify($currentPassword, $currentUserRow['password'])) {
+        jsonResponse(['success' => false, 'error' => t('auth.current_password_incorrect')], 400);
+    }
+
+    $passwordStrengthError = validatePasswordStrength($newPassword);
+    if ($passwordStrengthError !== null) {
+        jsonResponse(['success' => false, 'error' => $passwordStrengthError], 400);
+    }
+
+    if ($newPassword !== $newPasswordConfirm) {
+        jsonResponse(['success' => false, 'error' => t('auth.password_mismatch')], 400);
+    }
+
+    $updateStmt = $pdo->prepare('UPDATE users SET password = :password WHERE id = :id');
+    $updateStmt->execute([
+        'password' => password_hash($newPassword, PASSWORD_DEFAULT),
+        'id' => $currentUserId,
+    ]);
+
+    jsonResponse(['success' => true]);
+}
+
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);

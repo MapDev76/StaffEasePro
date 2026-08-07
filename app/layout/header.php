@@ -131,6 +131,15 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
+    if (in_array($route, ['dashboard', 'my-space'], true)) {
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => t('auth.change_password_title'),
+            'target' => 'modal-change-password',
+            'icon' => 'key.svg',
+            'alt' => t('auth.change_password_title'),
+        ];
+    }
     if ($route === 'dashboard') {
         $rightIcons[] = [
             'type' => 'button',
@@ -244,6 +253,12 @@ if ($isLeadershipDashboard) {
         'type' => 'button',
         'label' => t('common.print'),
         'target' => 'modal-print',
+        'entity' => '',
+    ];
+    $mobileMenuItems[] = [
+        'type' => 'button',
+        'label' => t('auth.change_password_title'),
+        'target' => 'modal-change-password',
         'entity' => '',
     ];
     $mobileMenuItems[] = [

@@ -2280,7 +2280,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.password')); ?>
+                            <span class="password-field-with-generate">
+                                <input data-field="password" type="text" value="">
+                                <button type="button" class="admin-action-link admin-action-link-secondary" data-generate-password><?php echo e(t('auth.generate_password')); ?></button>
+                            </span>
+                        </label>
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link settings-user-create"><?php echo e(t('crud.create_user')); ?></button>
                             <button type="button" class="admin-action-link admin-action-link-secondary settings-user-reset"><?php echo e(t('crud.reset')); ?></button>
@@ -2357,7 +2362,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 <option value="inactive" <?php echo (($user['status'] ?? '') === 'inactive') ? 'selected' : ''; ?>><?php echo e(t('crud.inactive')); ?></option>
                                             </select>
                                         </label>
-                                        <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value="" placeholder="<?php echo e(t('crud.leave_blank_password')); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.password')); ?>
+                                            <span class="password-field-with-generate">
+                                                <input data-field="password" type="text" value="" placeholder="<?php echo e(t('crud.leave_blank_password')); ?>">
+                                                <button type="button" class="admin-action-link admin-action-link-secondary" data-generate-password><?php echo e(t('auth.generate_password')); ?></button>
+                                            </span>
+                                        </label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-user-save" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>"><?php echo e(t('settings.save')); ?></button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-user-cancel"><?php echo e(t('employee.cancel')); ?></button>

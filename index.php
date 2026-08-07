@@ -383,11 +383,21 @@ require $viewFile;
 <?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
 <?php endif; ?>
 
+<?php if ($isDashboardRoute || $isMySpaceRoute): ?>
+<?php require __DIR__ . '/app/layout/change-password-modal.php'; ?>
+<?php endif; ?>
+
 <?php if ($requiresApiClient): ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/api.js?v=<?php echo e($apiVersion); ?>"></script>
 <?php endif; ?>
 <?php if ($isDashboardRoute || $isMySpaceRoute): ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/signature-pad.js?v=<?php echo filemtime(__DIR__ . '/assets/js/signature-pad.js'); ?>"></script>
+<?php if (!$isDashboardRoute): ?>
+<script>
+        window.DashboardConfig = { apiDashboard: '<?php echo appUrl('api-dashboard'); ?>' };
+</script>
+<?php endif; ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/password-tools.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/password-tools.js'); ?>"></script>
 <?php endif; ?>
 <?php if ($isDashboardRoute): ?>
 <script>
