@@ -391,6 +391,7 @@ require $viewFile;
 <script defer src="<?php echo $basePath; ?>/assets/js/api.js?v=<?php echo e($apiVersion); ?>"></script>
 <?php endif; ?>
 <?php if ($isDashboardRoute || $isMySpaceRoute): ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/vendor/signature_pad/signature_pad.umd.min.js?v=<?php echo filemtime(__DIR__ . '/assets/js/vendor/signature_pad/signature_pad.umd.min.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/signature-pad.js?v=<?php echo filemtime(__DIR__ . '/assets/js/signature-pad.js'); ?>"></script>
 <?php if (!$isDashboardRoute): ?>
 <script>
