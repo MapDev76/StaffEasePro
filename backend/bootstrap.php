@@ -15,7 +15,7 @@ try {
 	$bootstrapPdo = getPDO();
 	ensureConnectionTrackingSchema($bootstrapPdo);
 	if (isLoggedIn()) {
-		touchCurrentUserConnection($bootstrapPdo);
+		enforceActiveSession($bootstrapPdo);
 	}
 } catch (Throwable $e) {
 	// Ignore tracking failures so the application can continue serving pages.

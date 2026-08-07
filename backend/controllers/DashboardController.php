@@ -669,7 +669,8 @@ if ($role === 'super_admin') {
     $moduleRows['departments'] = $departmentModel->allWithCompany();
     try {
         $recentConnectionsStmt = $pdo->query(
-            'SELECT uc.user_id,
+            'SELECT uc.id AS connection_id,
+                    uc.user_id,
                     uc.session_id,
                     uc.ip_address,
                     uc.user_agent,

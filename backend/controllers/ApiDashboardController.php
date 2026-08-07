@@ -73,6 +73,22 @@ $enforceDocumentScope = static function (array $documentRow) use ($role, $profil
     }
 };
 
+if ($action === 'delete_connection') {
+    if ($role !== 'super_admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $connectionId = (int) ($input['connection_id'] ?? 0);
+    if ($connectionId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'connection_id is required'], 400);
+    }
+
+    $deleteStmt = $pdo->prepare('DELETE FROM user_connections WHERE id = :id');
+    $deleteStmt->execute(['id' => $connectionId]);
+
+    jsonResponse(['success' => true]);
+}
+
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);

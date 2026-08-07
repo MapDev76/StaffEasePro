@@ -31,14 +31,7 @@ if (($_GET['route'] ?? 'login') === 'logout') {
     }
 
     $_SESSION = [];
-
-    if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-    }
-
-    session_destroy();
-    session_start();
+    session_regenerate_id(true);
     setFlash('success', t('auth.logout_success'));
     redirectTo('login');
 }
@@ -63,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password'])) {
             $loginError = t('auth.invalid_credentials');
+        } elseif (($user['role'] ?? '') !== 'super_admin' && !isCompanyActive(getPDO(), resolveUserCompanyId(getPDO(), $user))) {
+            $loginError = t('auth.company_inactive');
         } else {
             session_regenerate_id(true);
 

@@ -112,7 +112,7 @@ if (!$isPublicPage && $currentUser !== null) {
 
 $rightIcons = [];
 $logoutIcon = null;
-$isPublicInfoRoute = in_array($route, ['home', 'commercial', 'legal', 'contacts', 'creator', 'login', 'register'], true);
+$isPublicInfoRoute = in_array($route, ['home', 'commercial', 'legal', 'contacts', 'creator'], true);
 if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',

@@ -28,9 +28,12 @@ function appBasePath(): string
 
 function appUsesPrettyUrls(): bool
 {
+    // Check the raw request URI, not $_GET['route']: index.php normalizes the
+    // resolved route into $_GET['route'] for every request (clean or not), so
+    // checking isset($_GET['route']) here would always be true and force dirty
+    // URLs everywhere, even on requests that arrived via a clean path.
     $requestUri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
-    $hasExplicitRouteParam = isset($_GET['route']) || str_contains($requestUri, 'route=');
-    if ($hasExplicitRouteParam) {
+    if (str_contains($requestUri, 'route=')) {
         return false;
     }
 
@@ -266,6 +269,39 @@ function appNow(): DateTimeImmutable
     return new DateTimeImmutable('now', appTimezone());
 }
 
+function timeAgo(?string $datetime): string
+{
+    if ($datetime === null || $datetime === '') {
+        return '-';
+    }
+
+    try {
+        $then = new DateTimeImmutable($datetime, appTimezone());
+    } catch (Throwable $e) {
+        return '-';
+    }
+
+    $seconds = appNow()->getTimestamp() - $then->getTimestamp();
+    if ($seconds < 0) {
+        $seconds = 0;
+    }
+
+    if ($seconds < 60) {
+        return t('settings.time_ago_just_now');
+    }
+    if ($seconds < 3600) {
+        return t('settings.time_ago_minutes', ['count' => (string) intdiv($seconds, 60)]);
+    }
+    if ($seconds < 86400) {
+        return t('settings.time_ago_hours', ['count' => (string) intdiv($seconds, 3600)]);
+    }
+    if ($seconds < 2592000) {
+        return t('settings.time_ago_days', ['count' => (string) intdiv($seconds, 86400)]);
+    }
+
+    return t('settings.time_ago_months', ['count' => (string) intdiv($seconds, 2592000)]);
+}
+
 function commercialVideosConfigPath(): string
 {
     return __DIR__ . '/../config/commercial-videos.json';
@@ -380,6 +416,37 @@ function saveCommercialVideos(array $videos): array
     }
 
     return $normalized;
+}
+
+function resolveUserCompanyId(PDO $pdo, array $user): int
+{
+    $companyId = (int) ($user['company_id'] ?? 0);
+    if ($companyId > 0) {
+        return $companyId;
+    }
+
+    $departmentId = (int) ($user['department_id'] ?? 0);
+    if ($departmentId <= 0) {
+        return 0;
+    }
+
+    $statement = $pdo->prepare('SELECT company_id FROM departments WHERE id = :id');
+    $statement->execute(['id' => $departmentId]);
+
+    return (int) ($statement->fetchColumn() ?: 0);
+}
+
+function isCompanyActive(PDO $pdo, int $companyId): bool
+{
+    if ($companyId <= 0) {
+        return true;
+    }
+
+    $statement = $pdo->prepare('SELECT is_active FROM companies WHERE id = :id');
+    $statement->execute(['id' => $companyId]);
+    $value = $statement->fetchColumn();
+
+    return $value === false || (int) $value === 1;
 }
 
 function ensureConnectionTrackingSchema(PDO $pdo): void
@@ -507,6 +574,64 @@ function recordCurrentUserLogout(PDO $pdo, ?array $user = null): void
         'session_id' => session_id(),
         'user_id' => $userId,
     ]);
+}
+
+function appSessionIdleTimeoutSeconds(): int
+{
+    return 1800; // 30 minutes
+}
+
+function forceLogout(PDO $pdo, string $message): never
+{
+    try {
+        recordCurrentUserLogout($pdo);
+    } catch (Throwable $e) {
+        // Ignore logout tracking failures.
+    }
+
+    unset($_SESSION['auth_user']);
+    session_regenerate_id(true);
+    setFlash('error', $message);
+    redirectTo('login');
+}
+
+/**
+ * Verifies the current session is still valid on every request: the user's
+ * company must still be active, and the session must not have been idle
+ * longer than appSessionIdleTimeoutSeconds(). Forces a logout otherwise.
+ * Call once per request, in place of touchCurrentUserConnection().
+ */
+function enforceActiveSession(PDO $pdo): void
+{
+    $user = currentUser();
+    if ($user === null) {
+        return;
+    }
+
+    if (($user['role'] ?? '') !== 'super_admin') {
+        $companyId = resolveUserCompanyId($pdo, $user);
+        if (!isCompanyActive($pdo, $companyId)) {
+            forceLogout($pdo, t('auth.company_inactive'));
+        }
+    }
+
+    $statement = $pdo->prepare('SELECT last_seen_at FROM user_connections WHERE session_id = :session_id LIMIT 1');
+    $statement->execute(['session_id' => session_id()]);
+    $lastSeenAt = $statement->fetchColumn();
+
+    if ($lastSeenAt !== false && $lastSeenAt !== null) {
+        try {
+            $lastSeen = new DateTimeImmutable((string) $lastSeenAt, appTimezone());
+            $idleSeconds = appNow()->getTimestamp() - $lastSeen->getTimestamp();
+            if ($idleSeconds > appSessionIdleTimeoutSeconds()) {
+                forceLogout($pdo, t('auth.session_expired'));
+            }
+        } catch (Throwable $e) {
+            // Ignore malformed timestamps and fall through to refreshing the session.
+        }
+    }
+
+    touchCurrentUserConnection($pdo, $user);
 }
 
 /**

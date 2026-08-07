@@ -108,6 +108,17 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                                 <p><strong><?php echo e(t('common.departments')); ?>:</strong> <?php echo e(empty($company['departments']) ? t('common.none') : implode(', ', $company['departments'])); ?></p>
                                 <p><strong><?php echo e(t('settings.connected_users', ['fallback' => 'Utenti connessi'])); ?>:</strong> <?php echo e(empty($company['connected_users']) ? t('common.none') : implode(', ', $company['connected_users'])); ?></p>
                                 <p><strong><?php echo e(t('settings.last_connection', ['fallback' => 'Ultima connessione'])); ?>:</strong> <?php echo e(!empty($company['last_connection_at']) ? date('d/m/Y H:i', strtotime((string) $company['last_connection_at'])) : '-'); ?></p>
+
+                                <div class="dashboard-company-card-actions">
+                                    <button type="button"
+                                            class="admin-action-link admin-action-link-secondary dashboard-company-toggle-active"
+                                            data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>"
+                                            data-company-active="<?php echo (int) ($company['is_active'] ?? 1); ?>"
+                                            data-label-when-active="<?php echo e(t('settings.company_deactivate')); ?>"
+                                            data-label-when-inactive="<?php echo e(t('settings.company_activate')); ?>">
+                                        <?php echo ((int) ($company['is_active'] ?? 1) === 1) ? e(t('settings.company_deactivate')) : e(t('settings.company_activate')); ?>
+                                    </button>
+                                </div>
                             </article>
                             </a>
                         <?php endforeach; ?>
@@ -115,8 +126,9 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                 </section>
 
                 <section class="admin-card">
-                    <h2><?php echo e(t('settings.recent_connections', ['fallback' => 'Connessioni recenti'])); ?></h2>
-                    <div class="table-wrap">
+                    <details class="dashboard-connections-history">
+                        <summary class="dashboard-connections-history-toggle"><?php echo e(t('settings.recent_connections', ['fallback' => 'Connessioni recenti'])); ?></summary>
+                        <div class="table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
@@ -124,27 +136,39 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                                     <th><?php echo e(t('common.company', ['fallback' => 'Company'])); ?></th>
                                     <th><?php echo e(t('common.department')); ?></th>
                                     <th><?php echo e(t('common.date', ['fallback' => 'Date'])); ?></th>
+                                    <th><?php echo e(t('settings.time_ago_label', ['fallback' => 'Tempo trascorso'])); ?></th>
                                     <th><?php echo e(t('common.status')); ?></th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($moduleRows['recent_connections'] ?? [])): ?>
                                     <tr>
-                                        <td colspan="5"><?php echo e(t('common.none')); ?></td>
+                                        <td colspan="7"><?php echo e(t('common.none')); ?></td>
                                     </tr>
                                 <?php endif; ?>
                                 <?php foreach (($moduleRows['recent_connections'] ?? []) as $connection): ?>
-                                    <tr>
+                                    <tr data-connection-row="<?php echo (int) ($connection['connection_id'] ?? 0); ?>">
                                         <td><?php echo e($connection['user_name'] ?? '-'); ?></td>
                                         <td><?php echo e($connection['company_name'] ?? '-'); ?></td>
                                         <td><?php echo e($connection['department_name'] ?? '-'); ?></td>
                                         <td><?php echo e(!empty($connection['last_seen_at']) ? date('d/m/Y H:i', strtotime((string) $connection['last_seen_at'])) : '-'); ?></td>
+                                        <td><?php echo e(timeAgo($connection['last_seen_at'] ?? null)); ?></td>
                                         <td><?php echo e(!empty($connection['logged_out_at']) ? t('common.done') : t('settings.active', ['fallback' => 'Active'])); ?></td>
+                                        <td>
+                                            <button type="button"
+                                                    class="admin-action-link admin-action-link-secondary settings-action-icon-danger dashboard-connection-delete"
+                                                    data-connection-id="<?php echo (int) ($connection['connection_id'] ?? 0); ?>"
+                                                    data-confirm-message="<?php echo e(t('settings.confirm_delete_connection')); ?>">
+                                                <?php echo e(t('schedule.delete')); ?>
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                    </div>
+                        </div>
+                    </details>
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager' || $isSuperAdminCompanyDashboard): ?>
                 <?php if ($isSuperAdminCompanyDashboard): ?>

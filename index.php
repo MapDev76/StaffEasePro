@@ -422,6 +422,7 @@ require $viewFile;
 </script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/onboarding-tour.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/onboarding-tour.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/super-admin-directory.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/super-admin-directory.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>
