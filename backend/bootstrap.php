@@ -3,6 +3,7 @@
 // Bootstrap file: loads the shared dependencies before controllers and views.
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mailer.php';
 
 date_default_timezone_set(appTimezoneName());
 

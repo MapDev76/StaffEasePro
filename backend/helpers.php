@@ -309,17 +309,20 @@ function commercialVideosConfigPath(): string
 
 function defaultCommercialVideos(): array
 {
+    // Titles come from the translation layer: without a saved
+    // config/commercial-videos.json these defaults are what visitors read, so
+    // hardcoding them would show Italian to French and English visitors.
     return [
         [
-            'title' => 'Demo generale della piattaforma',
+            'title' => t('commercial.video_1_title'),
             'url' => 'https://youtu.be/LckCMzphDw0',
         ],
         [
-            'title' => 'Calendario, turni e presenze',
+            'title' => t('commercial.video_2_title'),
             'url' => 'https://youtube.com/shorts/pylzptl-7Vg?feature=share',
         ],
         [
-            'title' => 'Documenti, messaggi e suite HotelEase Pro',
+            'title' => t('commercial.video_3_title'),
             'url' => 'https://youtu.be/C1cWXLeGM9Y',
         ],
     ];
@@ -1325,4 +1328,444 @@ function recordSignupAttempt(PDO $pdo, string $ip): void
     } catch (Throwable $e) {
         // Ignore throttle-tracking failures so signup can still proceed.
     }
+}
+/**
+ * Minutes a password reset token stays usable.
+ */
+function passwordResetTokenTtlMinutes(): int
+{
+    return 60;
+}
+
+/**
+ * Creates the password_resets table on first use, mirroring the defensive
+ * approach of ensureConnectionTrackingSchema().
+ */
+function ensurePasswordResetSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                token_hash CHAR(64) NOT NULL,
+                ip_address VARCHAR(45) NULL,
+                expires_at DATETIME NOT NULL,
+                used_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_password_resets_token (token_hash),
+                KEY idx_password_resets_user (user_id),
+                KEY idx_password_resets_expires (expires_at),
+                CONSTRAINT fk_password_resets_user
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    } catch (Throwable $e) {
+        // Keep the app running even if the current database user cannot create tables.
+    }
+
+    $initialized = true;
+}
+
+/**
+ * Issues a fresh reset token for a user and invalidates any pending one.
+ * Only the SHA-256 hash is stored, so a database leak cannot be replayed.
+ *
+ * @return string The raw token to be emailed (never persisted as-is).
+ */
+function createPasswordResetToken(PDO $pdo, int $userId, ?string $ip = null): string
+{
+    ensurePasswordResetSchema($pdo);
+
+    $token = bin2hex(random_bytes(32));
+
+    // Burn older pending tokens: only the newest link should work.
+    try {
+        $pdo->prepare('UPDATE password_resets SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL')
+            ->execute(['user_id' => $userId]);
+    } catch (Throwable $e) {
+        // Non fatal: the new token is still the only valid one after insert.
+    }
+
+    $pdo->prepare(
+        'INSERT INTO password_resets (user_id, token_hash, ip_address, expires_at)
+         VALUES (:user_id, :token_hash, :ip, DATE_ADD(NOW(), INTERVAL :mins MINUTE))'
+    )->execute([
+        'user_id' => $userId,
+        'token_hash' => hash('sha256', $token),
+        'ip' => $ip,
+        'mins' => passwordResetTokenTtlMinutes(),
+    ]);
+
+    return $token;
+}
+
+/**
+ * Returns the pending reset row for a raw token, or null when the token is
+ * unknown, already used or expired.
+ */
+function findValidPasswordResetToken(PDO $pdo, string $token): ?array
+{
+    $token = trim($token);
+    if ($token === '') {
+        return null;
+    }
+
+    ensurePasswordResetSchema($pdo);
+
+    try {
+        $statement = $pdo->prepare(
+            'SELECT id, user_id, expires_at
+             FROM password_resets
+             WHERE token_hash = :token_hash
+               AND used_at IS NULL
+               AND expires_at > NOW()
+             LIMIT 1'
+        );
+        $statement->execute(['token_hash' => hash('sha256', $token)]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return null;
+    }
+
+    return $row ?: null;
+}
+
+/**
+ * Marks a reset token as consumed so the link cannot be replayed.
+ */
+function consumePasswordResetToken(PDO $pdo, int $resetId): void
+{
+    try {
+        $pdo->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = :id')->execute(['id' => $resetId]);
+    } catch (Throwable $e) {
+        // Ignore: the password has already been changed at this point.
+    }
+}
+
+/**
+ * Counts recent reset requests from one IP, to throttle abuse.
+ */
+function recentPasswordResetCount(PDO $pdo, string $ip, int $windowMinutes = 60): int
+{
+    ensurePasswordResetSchema($pdo);
+
+    try {
+        $statement = $pdo->prepare(
+            'SELECT COUNT(*) FROM password_resets WHERE ip_address = :ip AND created_at >= DATE_SUB(NOW(), INTERVAL :mins MINUTE)'
+        );
+        $statement->bindValue(':ip', $ip);
+        $statement->bindValue(':mins', $windowMinutes, PDO::PARAM_INT);
+        $statement->execute();
+
+        return (int) $statement->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Days granted by a trial once a sign-up request is approved.
+ */
+function trialPeriodDays(): int
+{
+    return 30;
+}
+
+/**
+ * Adds the sign-up approval columns and the approval-token table on first use.
+ *
+ * Existing companies default to 'approved' with a NULL trial_ends_at, which
+ * means "no expiry": the workflow only affects new self-service sign-ups.
+ */
+function ensureCompanyApprovalSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $existing = $pdo->query('SHOW COLUMNS FROM companies')->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!in_array('approval_status', $existing, true)) {
+            $pdo->exec(
+                "ALTER TABLE companies
+                 ADD COLUMN approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved'"
+            );
+        }
+        if (!in_array('trial_ends_at', $existing, true)) {
+            $pdo->exec('ALTER TABLE companies ADD COLUMN trial_ends_at DATETIME NULL');
+        }
+        if (!in_array('trial_expired_notified_at', $existing, true)) {
+            $pdo->exec('ALTER TABLE companies ADD COLUMN trial_expired_notified_at DATETIME NULL');
+        }
+        if (!in_array('vat_number', $existing, true)) {
+            $pdo->exec('ALTER TABLE companies ADD COLUMN vat_number VARCHAR(32) NULL');
+        }
+        if (!in_array('contact_role', $existing, true)) {
+            $pdo->exec('ALTER TABLE companies ADD COLUMN contact_role VARCHAR(120) NULL');
+        }
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS company_approvals (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                company_id INT NOT NULL,
+                requested_by_user_id INT NULL,
+                token_hash CHAR(64) NOT NULL,
+                decision ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                decided_at DATETIME NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_company_approvals_token (token_hash),
+                KEY idx_company_approvals_company (company_id),
+                KEY idx_company_approvals_decision (decision),
+                CONSTRAINT fk_company_approvals_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        // Keep the app running even if the current database user cannot alter tables.
+    }
+
+    $initialized = true;
+}
+
+/**
+ * Issues the one-time token embedded in the approve/reject buttons of the
+ * notification email. Any older pending token for the company is retired.
+ */
+function createCompanyApprovalToken(PDO $pdo, int $companyId, ?int $requestedByUserId = null, int $ttlDays = 30): string
+{
+    ensureCompanyApprovalSchema($pdo);
+
+    $token = bin2hex(random_bytes(32));
+
+    try {
+        $pdo->prepare("UPDATE company_approvals SET decision = 'rejected', decided_at = NOW()
+                       WHERE company_id = :company_id AND decision = 'pending'")
+            ->execute(['company_id' => $companyId]);
+    } catch (Throwable $e) {
+        // Non fatal: the newest token is still the only usable one after insert.
+    }
+
+    $pdo->prepare(
+        'INSERT INTO company_approvals (company_id, requested_by_user_id, token_hash, expires_at)
+         VALUES (:company_id, :user_id, :token_hash, DATE_ADD(NOW(), INTERVAL :days DAY))'
+    )->execute([
+        'company_id' => $companyId,
+        'user_id' => $requestedByUserId,
+        'token_hash' => hash('sha256', $token),
+        'days' => $ttlDays,
+    ]);
+
+    return $token;
+}
+
+/**
+ * Resolves a raw approval token to its pending row, or null when unusable.
+ */
+function findPendingCompanyApproval(PDO $pdo, string $token): ?array
+{
+    $token = trim($token);
+    if ($token === '') {
+        return null;
+    }
+
+    ensureCompanyApprovalSchema($pdo);
+
+    try {
+        $statement = $pdo->prepare(
+            "SELECT ca.id, ca.company_id, ca.requested_by_user_id, c.name AS company_name
+             FROM company_approvals ca
+             INNER JOIN companies c ON c.id = ca.company_id
+             WHERE ca.token_hash = :token_hash
+               AND ca.decision = 'pending'
+               AND ca.expires_at > NOW()
+             LIMIT 1"
+        );
+        $statement->execute(['token_hash' => hash('sha256', $token)]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return null;
+    }
+
+    return $row ?: null;
+}
+
+/**
+ * Applies an approve/reject decision: stamps the token, moves the company to
+ * its new status and starts the trial clock on approval.
+ *
+ * @return array{company_id:int,trial_ends_at:?string}
+ */
+function decideCompanyApproval(PDO $pdo, array $approvalRow, bool $approved): array
+{
+    $companyId = (int) $approvalRow['company_id'];
+    $trialEndsAt = null;
+
+    $pdo->prepare('UPDATE company_approvals SET decision = :decision, decided_at = NOW() WHERE id = :id')
+        ->execute([
+            'decision' => $approved ? 'approved' : 'rejected',
+            'id' => (int) $approvalRow['id'],
+        ]);
+
+    if ($approved) {
+        $pdo->prepare(
+            "UPDATE companies
+             SET approval_status = 'approved',
+                 is_active = 1,
+                 trial_ends_at = DATE_ADD(NOW(), INTERVAL :days DAY),
+                 trial_expired_notified_at = NULL
+             WHERE id = :id"
+        )->execute(['days' => trialPeriodDays(), 'id' => $companyId]);
+
+        $trialEndsAt = (string) $pdo->query('SELECT trial_ends_at FROM companies WHERE id = ' . $companyId)->fetchColumn();
+    } else {
+        $pdo->prepare("UPDATE companies SET approval_status = 'rejected' WHERE id = :id")
+            ->execute(['id' => $companyId]);
+    }
+
+    return ['company_id' => $companyId, 'trial_ends_at' => $trialEndsAt];
+}
+
+/**
+ * Describes what a company is currently allowed to do.
+ *
+ * Returns one of: 'ok', 'pending', 'rejected', 'expired', 'disabled'.
+ * A NULL trial_ends_at means an unlimited account (every pre-existing company).
+ */
+function companyAccessState(PDO $pdo, int $companyId): string
+{
+    if ($companyId <= 0) {
+        return 'ok';
+    }
+
+    ensureCompanyApprovalSchema($pdo);
+
+    try {
+        $statement = $pdo->prepare('SELECT is_active, approval_status, trial_ends_at FROM companies WHERE id = :id LIMIT 1');
+        $statement->execute(['id' => $companyId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return 'ok';
+    }
+
+    if (!$row) {
+        return 'ok';
+    }
+
+    if ((int) ($row['is_active'] ?? 1) !== 1) {
+        return 'disabled';
+    }
+
+    $status = (string) ($row['approval_status'] ?? 'approved');
+    if ($status === 'pending') {
+        return 'pending';
+    }
+    if ($status === 'rejected') {
+        return 'rejected';
+    }
+
+    $trialEndsAt = $row['trial_ends_at'] ?? null;
+    if ($trialEndsAt !== null && strtotime((string) $trialEndsAt) !== false && strtotime((string) $trialEndsAt) <= time()) {
+        return 'expired';
+    }
+
+    return 'ok';
+}
+
+/**
+ * Sign-up requests still awaiting a decision, newest first.
+ *
+ * Joins the company details captured at registration and the account that
+ * submitted them, so the super admin dashboard can show the same information
+ * that went out in the notification email.
+ */
+function pendingCompanyApprovals(PDO $pdo): array
+{
+    ensureCompanyApprovalSchema($pdo);
+
+    try {
+        $statement = $pdo->query(
+            "SELECT ca.id AS approval_id,
+                    ca.created_at AS requested_at,
+                    c.id AS company_id,
+                    c.name AS company_name,
+                    c.type AS company_type,
+                    c.city,
+                    c.province,
+                    c.address,
+                    c.zip_code,
+                    c.phone AS company_phone,
+                    c.email AS company_email,
+                    c.vat_number,
+                    c.contact_role,
+                    u.first_name,
+                    u.last_name,
+                    u.email AS contact_email,
+                    u.phone AS contact_phone
+             FROM company_approvals ca
+             INNER JOIN companies c ON c.id = ca.company_id
+             LEFT JOIN users u ON u.id = ca.requested_by_user_id
+             WHERE ca.decision = 'pending'
+               AND ca.expires_at > NOW()
+               AND c.approval_status = 'pending'
+             ORDER BY ca.created_at DESC, ca.id DESC"
+        );
+
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * General in-app notifications for a user: system notices such as trial
+ * renewal reminders, distinct from the document-sharing "notification" rows
+ * (which always carry a document_id) and from leave/permission requests.
+ */
+function userGeneralNotifications(PDO $pdo, int $userId, int $limit = 50): array
+{
+    $statement = $pdo->prepare(
+        'SELECT id, title, message, status, created_at
+         FROM requests
+         WHERE user_id = :user_id
+           AND type = "notification"
+           AND document_id IS NULL
+           AND recipient_id IS NULL
+         ORDER BY created_at DESC, id DESC
+         LIMIT :limit'
+    );
+    $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
+    $statement->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+    $statement->execute();
+
+    return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+/**
+ * Count of unread general notifications, for the header bell badge.
+ */
+function unreadGeneralNotificationCount(PDO $pdo, int $userId): int
+{
+    $statement = $pdo->prepare(
+        'SELECT COUNT(*)
+         FROM requests
+         WHERE user_id = :user_id
+           AND type = "notification"
+           AND document_id IS NULL
+           AND recipient_id IS NULL
+           AND status = "pending"'
+    );
+    $statement->execute(['user_id' => $userId]);
+
+    return (int) $statement->fetchColumn();
 }

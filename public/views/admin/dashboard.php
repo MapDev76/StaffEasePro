@@ -56,24 +56,71 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
 
         <section class="dashboard-main" aria-label="<?php echo e(t('common.quick_actions')); ?>">
             <?php if ($role === 'super_admin' && !$isSuperAdminCompanyDashboard): ?>
-                <div class="admin-grid">
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e($stats['users'] ?? 0); ?></span>
-                        <span class="admin-stat-label"><?php echo e(t('common.users')); ?></span>
+                <?php if (!empty($dashboardPendingApprovals ?? [])): ?>
+                    <section class="admin-card dashboard-approvals-section" data-approvals-section>
+                        <h2 class="dashboard-approvals-title">
+                            <?php echo e(t('approval.pending_list_title')); ?>
+                            <span class="dashboard-approvals-count"><?php echo count($dashboardPendingApprovals); ?></span>
+                        </h2>
+
+                        <?php foreach ($dashboardPendingApprovals as $request): ?>
+                            <?php
+                                $requestContact = trim((string) (($request['first_name'] ?? '') . ' ' . ($request['last_name'] ?? '')));
+                                $requestTypeKey = (string) ($request['company_type'] ?? 'other');
+                                $requestDetails = array_filter([
+                                    t('mail.field_type') => t('crud.company_type_' . $requestTypeKey) !== 'crud.company_type_' . $requestTypeKey
+                                        ? t('crud.company_type_' . $requestTypeKey) : $requestTypeKey,
+                                    t('mail.field_vat') => (string) ($request['vat_number'] ?? ''),
+                                    t('mail.field_address') => trim(implode(' ', array_filter([
+                                        (string) ($request['address'] ?? ''),
+                                        (string) ($request['zip_code'] ?? ''),
+                                        (string) ($request['city'] ?? ''),
+                                        (string) ($request['province'] ?? '') !== '' ? '(' . $request['province'] . ')' : '',
+                                    ]))),
+                                    t('mail.field_company_email') => (string) ($request['company_email'] ?? ''),
+                                    t('mail.field_phone') => (string) ($request['company_phone'] ?? ''),
+                                    t('mail.field_contact') => $requestContact,
+                                    t('mail.field_contact_role') => (string) ($request['contact_role'] ?? ''),
+                                    t('mail.field_email') => (string) ($request['contact_email'] ?? ''),
+                                    t('mail.field_contact_phone') => (string) ($request['contact_phone'] ?? ''),
+                                ], static fn($value) => trim((string) $value) !== '');
+                            ?>
+                            <article class="dashboard-approval-card" data-approval-row data-company-id="<?php echo (int) $request['company_id']; ?>">
+                                <div class="dashboard-approval-head">
+                                    <h3><?php echo e($request['company_name']); ?></h3>
+                                    <span class="dashboard-approval-date">
+                                        <?php echo e(t('approval.requested_at')); ?>
+                                        <?php echo e(!empty($request['requested_at']) ? date('d/m/Y H:i', strtotime((string) $request['requested_at'])) : '-'); ?>
+                                    </span>
+                                </div>
+
+                                <dl class="dashboard-approval-details">
+                                    <?php foreach ($requestDetails as $detailLabel => $detailValue): ?>
+                                        <dt><?php echo e($detailLabel); ?></dt>
+                                        <dd><?php echo e($detailValue); ?></dd>
+                                    <?php endforeach; ?>
+                                </dl>
+
+                                <div class="dashboard-approval-actions">
+                                    <button type="button"
+                                            class="admin-action-link dashboard-approval-decide"
+                                            data-company-id="<?php echo (int) $request['company_id']; ?>"
+                                            data-decision="approve"
+                                            data-confirm-message="<?php echo e(t('approval.approve') . ' - ' . $request['company_name']); ?>">
+                                        <?php echo e(t('approval.approve')); ?>
+                                    </button>
+                                    <button type="button"
+                                            class="admin-action-link admin-action-link-secondary dashboard-approval-decide"
+                                            data-company-id="<?php echo (int) $request['company_id']; ?>"
+                                            data-decision="reject"
+                                            data-confirm-message="<?php echo e(t('approval.reject') . ' - ' . $request['company_name']); ?>">
+                                        <?php echo e(t('approval.reject')); ?>
+                                    </button>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
                     </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e($stats['companies'] ?? 0); ?></span>
-                        <span class="admin-stat-label"><?php echo e(t('common.companies')); ?></span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e($stats['departments'] ?? 0); ?></span>
-                        <span class="admin-stat-label"><?php echo e(t('common.departments')); ?></span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e($stats['connections'] ?? 0); ?></span>
-                        <span class="admin-stat-label"><?php echo e(t('settings.active_connections', ['fallback' => 'Connessioni attive'])); ?></span>
-                    </section>
-                </div>
+                <?php endif; ?>
 
                 <section class="admin-card company-directory-section">
 
@@ -107,7 +154,81 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                                 <p><strong><?php echo e(t('common.department_heads')); ?>:</strong> <?php echo e(empty($company['heads']) ? t('common.none') : implode(', ', $company['heads'])); ?></p>
                                 <p><strong><?php echo e(t('common.departments')); ?>:</strong> <?php echo e(empty($company['departments']) ? t('common.none') : implode(', ', $company['departments'])); ?></p>
                                 <p><strong><?php echo e(t('settings.connected_users', ['fallback' => 'Utenti connessi'])); ?>:</strong> <?php echo e(empty($company['connected_users']) ? t('common.none') : implode(', ', $company['connected_users'])); ?></p>
-                                <p><strong><?php echo e(t('settings.last_connection', ['fallback' => 'Ultima connessione'])); ?>:</strong> <?php echo e(!empty($company['last_connection_at']) ? date('d/m/Y H:i', strtotime((string) $company['last_connection_at'])) : '-'); ?></p>
+                                <?php
+                                    // Connection recency and trial countdown: with no automatic
+                                    // expiry job the super admin needs to see both at a glance.
+                                    $lastConnectionRaw = (string) ($company['last_connection_at'] ?? '');
+                                    $lastConnectionTs = $lastConnectionRaw !== '' ? strtotime($lastConnectionRaw) : false;
+                                    $hoursSinceLogin = $lastConnectionTs !== false
+                                        ? (int) floor((time() - $lastConnectionTs) / 3600)
+                                        : null;
+
+                                    $trialEndsRaw = $company['trial_ends_at'] ?? null;
+                                    $trialEndsTs = $trialEndsRaw !== null && $trialEndsRaw !== '' ? strtotime((string) $trialEndsRaw) : false;
+                                    if ($trialEndsTs === false) {
+                                        $trialLabel = t('mail.trial_none');
+                                        $trialState = 'none';
+                                    } else {
+                                        $daysLeft = (int) ceil(($trialEndsTs - time()) / 86400);
+                                        $trialLabel = $daysLeft >= 0
+                                            ? t('mail.trial_days_left', ['days' => (string) $daysLeft])
+                                            : t('mail.trial_over', ['days' => (string) abs($daysLeft)]);
+                                        $trialState = $daysLeft < 0 ? 'over' : ($daysLeft <= 7 ? 'soon' : 'ok');
+                                    }
+                                ?>
+                                <p><strong><?php echo e(t('settings.last_connection', ['fallback' => 'Ultima connessione'])); ?>:</strong>
+                                    <?php echo e($lastConnectionTs !== false ? date('d/m/Y H:i', $lastConnectionTs) : '-'); ?>
+                                    <?php if ($lastConnectionTs !== false): ?>
+                                        <span class="dashboard-company-since">(<?php echo e(timeAgo($lastConnectionRaw)); ?>)</span>
+                                    <?php endif; ?>
+                                </p>
+                                <p><strong><?php echo e(t('mail.field_hours_since_login')); ?>:</strong>
+                                    <?php echo e($hoursSinceLogin !== null ? $hoursSinceLogin . ' h' : '-'); ?></p>
+                                <p><strong><?php echo e(t('mail.field_trial_status')); ?>:</strong>
+                                    <span class="dashboard-company-trial is-<?php echo e($trialState); ?>"><?php echo e($trialLabel); ?></span>
+                                    <?php if ($trialEndsTs !== false): ?>
+                                        <span class="dashboard-company-since">(<?php echo e(date('d/m/Y', $trialEndsTs)); ?>)</span>
+                                    <?php endif; ?>
+                                </p>
+
+                                <div class="dashboard-company-trial-edit" data-company-trial-edit>
+                                    <label>
+                                        <span><?php echo e(t('mail.trial_edit_label')); ?></span>
+                                        <input type="date"
+                                               data-trial-date
+                                               value="<?php echo e($trialEndsTs !== false ? date('Y-m-d', $trialEndsTs) : ''); ?>"
+                                               <?php echo $trialEndsTs === false ? 'disabled' : ''; ?>>
+                                    </label>
+                                    <button type="button"
+                                            class="admin-action-link admin-action-link-secondary dashboard-company-trial-no-expiry-toggle<?php echo $trialEndsTs === false ? ' is-active' : ''; ?>"
+                                            data-trial-no-expiry
+                                            data-no-expiry="<?php echo $trialEndsTs === false ? '1' : '0'; ?>"
+                                            aria-pressed="<?php echo $trialEndsTs === false ? 'true' : 'false'; ?>">
+                                        <?php echo e(t('mail.trial_no_expiry_label')); ?>
+                                    </button>
+                                    <button type="button"
+                                            class="admin-action-link admin-action-link-secondary dashboard-company-trial-save"
+                                            data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>">
+                                        <?php echo e(t('mail.trial_save')); ?>
+                                    </button>
+                                </div>
+
+                                <div class="dashboard-company-notice" data-company-notice>
+                                    <label>
+                                        <span><?php echo e(t('mail.notice_section_title')); ?></span>
+                                        <select data-notice-template>
+                                            <?php foreach (companyNoticeTemplates() as $noticeTemplate): ?>
+                                                <option value="<?php echo e($noticeTemplate); ?>"><?php echo e(t('mail.tpl_' . $noticeTemplate)); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <button type="button"
+                                            class="admin-action-link dashboard-company-notice-send"
+                                            data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>"
+                                            data-confirm-message="<?php echo e(t('mail.notice_send') . ' - ' . ($company['name'] ?? '')); ?>">
+                                        <?php echo e(t('mail.notice_send')); ?>
+                                    </button>
+                                </div>
 
                                 <div class="dashboard-company-card-actions">
                                     <button type="button"
@@ -118,57 +239,47 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                                             data-label-when-inactive="<?php echo e(t('settings.company_activate')); ?>">
                                         <?php echo ((int) ($company['is_active'] ?? 1) === 1) ? e(t('settings.company_deactivate')) : e(t('settings.company_activate')); ?>
                                     </button>
+                                    <button type="button"
+                                            class="admin-action-link admin-action-link-secondary dashboard-company-connections-toggle"
+                                            data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>"
+                                            aria-expanded="false">
+                                        <?php echo e(t('settings.company_connections_toggle', ['fallback' => 'Connessioni'])); ?>
+                                    </button>
+                                </div>
+
+                                <div class="dashboard-company-connections-panel"
+                                     data-company-connections-panel
+                                     data-label-loading="<?php echo e(t('settings.loading', ['fallback' => 'Caricamento…'])); ?>"
+                                     data-label-empty="<?php echo e(t('common.none')); ?>"
+                                     data-label-error="<?php echo e(t('common.error', ['fallback' => 'Errore'])); ?>"
+                                     data-label-active="<?php echo e(t('settings.active', ['fallback' => 'Active'])); ?>"
+                                     data-label-done="<?php echo e(t('common.done')); ?>"
+                                     data-label-delete="<?php echo e(t('schedule.delete')); ?>"
+                                     data-confirm-delete="<?php echo e(t('settings.confirm_delete_connection')); ?>"
+                                     hidden>
+                                    <div class="table-wrap">
+                                        <table class="admin-table">
+                                            <thead>
+                                                <tr>
+                                                    <th><?php echo e(t('settings.user_label', ['fallback' => 'Utente'])); ?></th>
+                                                    <th><?php echo e(t('common.department')); ?></th>
+                                                    <th><?php echo e(t('settings.time_ago_label', ['fallback' => 'Tempo trascorso'])); ?></th>
+                                                    <th><?php echo e(t('common.status')); ?></th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-company-connections-body>
+                                                <tr class="dashboard-company-connections-placeholder">
+                                                    <td colspan="5"><?php echo e(t('settings.loading', ['fallback' => 'Caricamento…'])); ?></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </article>
                             </a>
                         <?php endforeach; ?>
                     </div>
-                </section>
-
-                <section class="admin-card">
-                    <details class="dashboard-connections-history">
-                        <summary class="dashboard-connections-history-toggle"><?php echo e(t('settings.recent_connections', ['fallback' => 'Connessioni recenti'])); ?></summary>
-                        <div class="table-wrap">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th><?php echo e(t('settings.user_label', ['fallback' => 'Utente'])); ?></th>
-                                    <th><?php echo e(t('common.company', ['fallback' => 'Company'])); ?></th>
-                                    <th><?php echo e(t('common.department')); ?></th>
-                                    <th><?php echo e(t('common.date', ['fallback' => 'Date'])); ?></th>
-                                    <th><?php echo e(t('settings.time_ago_label', ['fallback' => 'Tempo trascorso'])); ?></th>
-                                    <th><?php echo e(t('common.status')); ?></th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($moduleRows['recent_connections'] ?? [])): ?>
-                                    <tr>
-                                        <td colspan="7"><?php echo e(t('common.none')); ?></td>
-                                    </tr>
-                                <?php endif; ?>
-                                <?php foreach (($moduleRows['recent_connections'] ?? []) as $connection): ?>
-                                    <tr data-connection-row="<?php echo (int) ($connection['connection_id'] ?? 0); ?>">
-                                        <td><?php echo e($connection['user_name'] ?? '-'); ?></td>
-                                        <td><?php echo e($connection['company_name'] ?? '-'); ?></td>
-                                        <td><?php echo e($connection['department_name'] ?? '-'); ?></td>
-                                        <td><?php echo e(!empty($connection['last_seen_at']) ? date('d/m/Y H:i', strtotime((string) $connection['last_seen_at'])) : '-'); ?></td>
-                                        <td><?php echo e(timeAgo($connection['last_seen_at'] ?? null)); ?></td>
-                                        <td><?php echo e(!empty($connection['logged_out_at']) ? t('common.done') : t('settings.active', ['fallback' => 'Active'])); ?></td>
-                                        <td>
-                                            <button type="button"
-                                                    class="admin-action-link admin-action-link-secondary settings-action-icon-danger dashboard-connection-delete"
-                                                    data-connection-id="<?php echo (int) ($connection['connection_id'] ?? 0); ?>"
-                                                    data-confirm-message="<?php echo e(t('settings.confirm_delete_connection')); ?>">
-                                                <?php echo e(t('schedule.delete')); ?>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                        </div>
-                    </details>
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager' || $isSuperAdminCompanyDashboard): ?>
                 <?php if ($isSuperAdminCompanyDashboard): ?>

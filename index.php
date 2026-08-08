@@ -23,12 +23,38 @@ $isHomeRoute = $route === 'home';
 $isCommercialRoute = $route === 'commercial';
 $isLoginRoute = $route === 'login';
 $isRegisterRoute = $route === 'register';
+// Password recovery pages are public but must never be indexed.
+$isPasswordRecoveryRoute = $route === 'forgot-password' || $route === 'reset-password';
+$isApprovalRoute = $route === 'company-approval';
+// A signed-in user whose company is not cleared for use (awaiting approval,
+// rejected, or past its trial) gets a lock screen instead of the app.
+$accountGateState = null;
+$accountGateCompanyName = '';
+if (isLoggedIn() && in_array($route, ['dashboard', 'my-space'], true)) {
+        $gateUser = currentUser() ?? [];
+        if ((string) ($gateUser['role'] ?? '') !== 'super_admin') {
+                try {
+                        $gatePdo = getPDO();
+                        $gateCompanyId = resolveUserCompanyId($gatePdo, $gateUser);
+                        $gateState = companyAccessState($gatePdo, $gateCompanyId);
+                        if (in_array($gateState, ['pending', 'rejected', 'expired'], true)) {
+                                $accountGateState = $gateState;
+                                $gateNameStmt = $gatePdo->prepare('SELECT name FROM companies WHERE id = :id LIMIT 1');
+                                $gateNameStmt->execute(['id' => $gateCompanyId]);
+                                $accountGateCompanyName = (string) ($gateNameStmt->fetchColumn() ?: '');
+                        }
+                } catch (Throwable $gateError) {
+                        // Never lock people out because of an infrastructure hiccup.
+                        $accountGateState = null;
+                }
+        }
+}
 $isMySpaceRoute = $route === 'my-space';
 $isLegalRoute = $route === 'legal';
 $isContactsRoute = $route === 'contacts';
 $isCreatorRoute = $route === 'creator';
 $isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute;
-$isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isRegisterRoute || $isStaticInfoRoute;
+$isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isRegisterRoute || $isPasswordRecoveryRoute || $isApprovalRoute || $isStaticInfoRoute;
 $locale = appLocale();
 $shouldShowLoadingOverlay = $isDashboardRoute || $isMySpaceRoute;
 $requiresApiClient = ($isDashboardRoute || $isMySpaceRoute);
@@ -56,6 +82,9 @@ if ($isLoginRoute) {
 }
 if ($isRegisterRoute) {
         $bodyClasses[] = 'route-register';
+}
+if ($isPasswordRecoveryRoute || $isApprovalRoute) {
+        $bodyClasses[] = 'route-login';
 }
 if ($isMySpaceRoute) {
         $bodyClasses[] = 'route-my-space';
@@ -220,7 +249,7 @@ if (isset($publicCanonicalByRoute[$route])) {
 }
 $ogLocale = $localeCode === 'it' ? 'it_IT' : ($localeCode === 'fr' ? 'fr_FR' : 'en_US');
 $isPrivateRoute = $isDashboardRoute || $isMySpaceRoute;
-$robotsContent = $isPrivateRoute || $isLoginRoute ? 'noindex, nofollow' : 'index, follow';
+$robotsContent = $isPrivateRoute || $isLoginRoute || $isPasswordRecoveryRoute || $isApprovalRoute ? 'noindex, nofollow' : 'index, follow';
 $structuredData = [
         '@context' => 'https://schema.org',
         '@type' => 'SoftwareApplication',
@@ -320,7 +349,7 @@ $commercialVideosVersion = (string) (@filemtime($commercialVideosFile) ?: time()
 require __DIR__ . '/app/layout/header.php';
 ?>
 
-<?php if ($isDashboardRoute): ?>
+<?php if ($isDashboardRoute && $accountGateState === null): ?>
 <?php
 $currentRole = (string) (currentUser()['role'] ?? '');
 $hasScopedCompanyContext = ((int) ($_GET['settings_company_id'] ?? 0) > 0)
@@ -335,7 +364,7 @@ $showDashboardSidebar = $currentRole !== 'super_admin' || $hasScopedCompanyConte
 <?php require __DIR__ . '/app/layout/print-modal.php'; ?>
 <?php endif; ?>
 
-<main id="main-content" class="<?php echo $isCompactDashboard ? 'dashboard-content' : 'content' . ($isDashboardRoute ? ' content-dashboard' : ''); ?>" tabindex="-1">
+<main id="main-content" class="<?php echo ($isCompactDashboard && $accountGateState === null) ? 'dashboard-content' : 'content' . (($isDashboardRoute && $accountGateState === null) ? ' content-dashboard' : ''); ?>" tabindex="-1">
 <?php if ($flashSuccess !== null): ?>
                 <div id="flash-backdrop-success" class="flash-backdrop"></div>
                 <div id="flash-success" class="flash flash-success" role="alert" aria-live="assertive">
@@ -363,8 +392,13 @@ $showDashboardSidebar = $currentRole !== 'super_admin' || $hasScopedCompanyConte
 <?php endif; ?>
 
 <?php
-// Final view resolved by the router.
-require $viewFile;
+// Final view resolved by the router, unless the account is locked behind the
+// approval gate: then the lock screen replaces it entirely.
+if ($accountGateState !== null) {
+        require __DIR__ . '/app/layout/account-status-gate.php';
+} else {
+        require $viewFile;
+}
 ?>
 </main>
 
@@ -381,10 +415,17 @@ require $viewFile;
 
 <?php if ($isDashboardRoute): ?>
 <?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
+<?php if ((currentUser()['role'] ?? '') === 'admin' && ($accountGateState ?? null) === null): ?>
+<?php require __DIR__ . '/app/layout/send-notification-modal.php'; ?>
+<?php endif; ?>
 <?php endif; ?>
 
-<?php if ($isDashboardRoute || $isMySpaceRoute): ?>
+<?php if ($canOpenAccountModal ?? false): // set by header.php: my-space for everyone, dashboard for super admins ?>
 <?php require __DIR__ . '/app/layout/change-password-modal.php'; ?>
+<?php endif; ?>
+
+<?php if (($isDashboardRoute || $isMySpaceRoute) && isLoggedIn() && ($accountGateState ?? null) === null): ?>
+<?php require __DIR__ . '/app/layout/notifications-panel.php'; ?>
 <?php endif; ?>
 
 <?php if ($requiresApiClient): ?>
@@ -399,6 +440,21 @@ require $viewFile;
 </script>
 <?php endif; ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/password-tools.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/password-tools.js'); ?>"></script>
+<?php if (isLoggedIn() && ($accountGateState ?? null) === null): ?>
+<script>
+        window.NotificationsLabels = <?php echo json_encode([
+                'markRead' => t('notifications.mark_read'),
+                'delete' => t('notifications.delete'),
+                'deleteRequiresRead' => t('notifications.delete_requires_read'),
+                'empty' => t('notifications.empty'),
+                'loading' => t('settings.loading', ['fallback' => 'Caricamento…']),
+                'error' => t('common.error'),
+                'noRecipients' => t('notifications.compose_no_recipients'),
+                'sentSuccess' => t('notifications.compose_sent_success'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/notifications-panel.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/notifications-panel.js'); ?>"></script>
+<?php endif; ?>
 <?php endif; ?>
 <?php if ($isDashboardRoute): ?>
 <script>
@@ -444,6 +500,9 @@ require $viewFile;
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
+<?php if ((currentUser()['role'] ?? '') === 'admin'): ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/send-notification.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/send-notification.js'); ?>"></script>
+<?php endif; ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/commercial-videos.js?v=<?php echo e($commercialVideosVersion); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>

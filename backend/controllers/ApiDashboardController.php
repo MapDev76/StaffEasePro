@@ -89,33 +89,382 @@ if ($action === 'delete_connection') {
     jsonResponse(['success' => true]);
 }
 
+if ($action === 'company_connections') {
+    if ($role !== 'super_admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $requestedCompanyId = (int) ($input['company_id'] ?? 0);
+    if ($requestedCompanyId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'company_id is required'], 400);
+    }
+
+    $companyConnectionsStmt = $pdo->prepare(
+        'SELECT uc.id AS connection_id,
+                uc.last_seen_at,
+                uc.logged_out_at,
+                CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                d.name AS department_name
+         FROM user_connections uc
+         INNER JOIN users u ON u.id = uc.user_id
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE d.company_id = :company_id
+         ORDER BY COALESCE(uc.logged_out_at, uc.last_seen_at, uc.logged_in_at) DESC, uc.id DESC
+         LIMIT 10'
+    );
+    $companyConnectionsStmt->execute(['company_id' => $requestedCompanyId]);
+    $rows = $companyConnectionsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $connections = array_map(static function (array $row): array {
+        return [
+            'connection_id' => (int) $row['connection_id'],
+            'user_name' => (string) $row['user_name'],
+            'department_name' => $row['department_name'] !== null ? (string) $row['department_name'] : null,
+            'last_seen_at' => $row['last_seen_at'],
+            'is_active' => empty($row['logged_out_at']),
+            'time_ago' => timeAgo($row['last_seen_at']),
+        ];
+    }, $rows);
+
+    jsonResponse(['success' => true, 'connections' => $connections]);
+}
+
+if ($action === 'send_general_notifications') {
+    if ($role !== 'admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $broadcastCompanyId = (int) ($profile['company_id'] ?? 0);
+    if ($broadcastCompanyId <= 0) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $broadcastTitle = trim((string) ($input['title'] ?? ''));
+    $broadcastMessage = trim((string) ($input['message'] ?? ''));
+    $broadcastToAll = !empty($input['send_to_all']);
+    $broadcastRecipientIds = array_map('intval', is_array($input['recipient_ids'] ?? null) ? $input['recipient_ids'] : []);
+
+    if ($broadcastTitle === '' || $broadcastMessage === '') {
+        jsonResponse(['success' => false, 'error' => t('notifications.compose_required_fields')], 400);
+    }
+
+    // Only active employees in the admin's own company: never a channel to
+    // reach fellow admins/managers or another company's staff.
+    $eligibleEmployeesStmt = $pdo->prepare(
+        "SELECT u.id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.role = 'employee'
+           AND u.status = 'active'
+           AND COALESCE(u.company_id, d.company_id) = :company_id"
+    );
+    $eligibleEmployeesStmt->execute(['company_id' => $broadcastCompanyId]);
+    $eligibleEmployeeIds = array_map('intval', $eligibleEmployeesStmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
+    $targetIds = $broadcastToAll
+        ? $eligibleEmployeeIds
+        : array_values(array_intersect($eligibleEmployeeIds, $broadcastRecipientIds));
+
+    if (empty($targetIds)) {
+        jsonResponse(['success' => false, 'error' => t('notifications.compose_no_recipients')], 400);
+    }
+
+    $insertNoticeStmt = $pdo->prepare(
+        "INSERT INTO requests (user_id, type, title, message, status) VALUES (:user_id, 'notification', :title, :message, 'pending')"
+    );
+    $pdo->beginTransaction();
+    try {
+        foreach ($targetIds as $targetUserId) {
+            $insertNoticeStmt->execute([
+                'user_id' => $targetUserId,
+                'title' => $broadcastTitle,
+                'message' => $broadcastMessage,
+            ]);
+        }
+        $pdo->commit();
+    } catch (Throwable $broadcastError) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'error' => t('common.error')], 500);
+    }
+
+    jsonResponse(['success' => true, 'sent' => count($targetIds)]);
+}
+
+if ($action === 'list_notifications') {
+    $notifications = userGeneralNotifications($pdo, (int) $user['id']);
+    jsonResponse(['success' => true, 'notifications' => $notifications]);
+}
+
+if ($action === 'mark_notification_read') {
+    $notificationId = (int) ($input['notification_id'] ?? 0);
+    if ($notificationId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'notification_id is required'], 400);
+    }
+
+    $markStmt = $pdo->prepare(
+        'UPDATE requests
+         SET status = "read"
+         WHERE id = :id AND user_id = :user_id AND type = "notification"
+           AND document_id IS NULL AND recipient_id IS NULL'
+    );
+    $markStmt->execute(['id' => $notificationId, 'user_id' => (int) $user['id']]);
+
+    jsonResponse(['success' => true, 'updated' => $markStmt->rowCount() > 0]);
+}
+
+if ($action === 'delete_notification') {
+    $notificationId = (int) ($input['notification_id'] ?? 0);
+    if ($notificationId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'notification_id is required'], 400);
+    }
+
+    // Only a notification the user has already read can be deleted, matching
+    // the "read it, then you can dismiss it" flow in the panel.
+    $deleteStmt = $pdo->prepare(
+        'DELETE FROM requests
+         WHERE id = :id AND user_id = :user_id AND type = "notification"
+           AND document_id IS NULL AND recipient_id IS NULL AND status = "read"'
+    );
+    $deleteStmt->execute(['id' => $notificationId, 'user_id' => (int) $user['id']]);
+
+    if ($deleteStmt->rowCount() === 0) {
+        jsonResponse(['success' => false, 'error' => t('notifications.delete_requires_read')], 409);
+    }
+
+    jsonResponse(['success' => true]);
+}
+
+if ($action === 'set_company_trial') {
+    if ($role !== 'super_admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $trialCompanyId = (int) ($input['company_id'] ?? 0);
+    if ($trialCompanyId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'company_id is required'], 400);
+    }
+
+    ensureCompanyApprovalSchema($pdo);
+
+    // No expiry date means "until the next paid subscription": the super
+    // admin decides manually when to revisit it, no automatic cutoff.
+    $trialNoExpiry = !empty($input['no_expiry']);
+    $trialDateInput = trim((string) ($input['trial_ends_at'] ?? ''));
+
+    if ($trialNoExpiry) {
+        $trialEndsAtValue = null;
+    } else {
+        if ($trialDateInput === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $trialDateInput)) {
+            jsonResponse(['success' => false, 'error' => t('mail.trial_date_invalid')], 400);
+        }
+        $trialDateParts = date_parse($trialDateInput);
+        if (!empty($trialDateParts['error_count'])) {
+            jsonResponse(['success' => false, 'error' => t('mail.trial_date_invalid')], 400);
+        }
+        // End of that day, so the company stays usable through the chosen date.
+        $trialEndsAtValue = $trialDateInput . ' 23:59:59';
+    }
+
+    $trialUpdateStmt = $pdo->prepare(
+        'UPDATE companies SET trial_ends_at = :trial_ends_at, trial_expired_notified_at = NULL WHERE id = :id'
+    );
+    $trialUpdateStmt->execute(['trial_ends_at' => $trialEndsAtValue, 'id' => $trialCompanyId]);
+
+    jsonResponse(['success' => true, 'trial_ends_at' => $trialEndsAtValue]);
+}
+
+if ($action === 'send_company_notice') {
+    if ($role !== 'super_admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $noticeCompanyId = (int) ($input['company_id'] ?? 0);
+    $noticeTemplate = trim((string) ($input['template'] ?? ''));
+    if ($noticeCompanyId <= 0 || !in_array($noticeTemplate, companyNoticeTemplates(), true)) {
+        jsonResponse(['success' => false, 'error' => 'company_id and a valid template are required'], 400);
+    }
+
+    $noticeCompanyStmt = $pdo->prepare('SELECT * FROM companies WHERE id = :id LIMIT 1');
+    $noticeCompanyStmt->execute(['id' => $noticeCompanyId]);
+    $noticeCompany = $noticeCompanyStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$noticeCompany) {
+        jsonResponse(['success' => false, 'error' => 'Company not found'], 404);
+    }
+
+    // The notice goes to the company owner: the first active admin.
+    $noticeOwnerStmt = $pdo->prepare(
+        "SELECT id, first_name, last_name, email
+         FROM users
+         WHERE company_id = :company_id AND role = 'admin' AND status = 'active'
+         ORDER BY id ASC LIMIT 1"
+    );
+    $noticeOwnerStmt->execute(['company_id' => $noticeCompanyId]);
+    $noticeOwner = $noticeOwnerStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$noticeOwner) {
+        jsonResponse(['success' => false, 'error' => t('mail.notice_no_admin')], 404);
+    }
+
+    $noticeResult = sendCompanyNotice($pdo, $noticeOwner, $noticeCompany, $noticeTemplate);
+
+    jsonResponse([
+        'success' => true,
+        'email' => $noticeResult['email'],
+        'in_app' => $noticeResult['in_app'],
+        'message' => t('mail.notice_sent'),
+    ]);
+}
+
+if ($action === 'decide_company_approval') {
+    if ($role !== 'super_admin') {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $approvalCompanyId = (int) ($input['company_id'] ?? 0);
+    $approvalDecision = strtolower(trim((string) ($input['decision'] ?? '')));
+    if ($approvalCompanyId <= 0 || !in_array($approvalDecision, ['approve', 'reject'], true)) {
+        jsonResponse(['success' => false, 'error' => 'company_id and decision are required'], 400);
+    }
+
+    ensureCompanyApprovalSchema($pdo);
+
+    // Same pending row the emailed link would consume, found by company instead
+    // of by token: the session already proves who is deciding.
+    $pendingStmt = $pdo->prepare(
+        "SELECT id, company_id, requested_by_user_id
+         FROM company_approvals
+         WHERE company_id = :company_id AND decision = 'pending' AND expires_at > NOW()
+         ORDER BY id DESC LIMIT 1"
+    );
+    $pendingStmt->execute(['company_id' => $approvalCompanyId]);
+    $pendingRow = $pendingStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$pendingRow) {
+        jsonResponse(['success' => false, 'error' => t('approval.invalid_body')], 404);
+    }
+
+    $approved = $approvalDecision === 'approve';
+
+    try {
+        $pdo->beginTransaction();
+        $decision = decideCompanyApproval($pdo, $pendingRow, $approved);
+        $pdo->commit();
+    } catch (Throwable $approvalError) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'error' => t('common.error')], 500);
+    }
+
+    // Tell the applicant, exactly like the emailed decision does.
+    try {
+        $companyStmt = $pdo->prepare('SELECT * FROM companies WHERE id = :id LIMIT 1');
+        $companyStmt->execute(['id' => $decision['company_id']]);
+        $decidedCompany = $companyStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        // Two separate lookups: native prepared statements (EMULATE_PREPARES is
+        // off in db.php) reject the same named placeholder used twice.
+        $decidedRequester = null;
+        $requestedByUserId = (int) ($pendingRow['requested_by_user_id'] ?? 0);
+        if ($requestedByUserId > 0) {
+            $requesterStmt = $pdo->prepare('SELECT first_name, last_name, email FROM users WHERE id = :id LIMIT 1');
+            $requesterStmt->execute(['id' => $requestedByUserId]);
+            $decidedRequester = $requesterStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+        if ($decidedRequester === null) {
+            $ownerStmt = $pdo->prepare(
+                "SELECT first_name, last_name, email FROM users
+                 WHERE company_id = :company_id AND role = 'admin' AND status = 'active'
+                 ORDER BY id ASC LIMIT 1"
+            );
+            $ownerStmt->execute(['company_id' => $decision['company_id']]);
+            $decidedRequester = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        if ($decidedRequester) {
+            if ($approved) {
+                sendCompanyApprovedEmail($decidedRequester, $decidedCompany, $decision['trial_ends_at']);
+            } else {
+                sendCompanyRejectedEmail($decidedRequester, $decidedCompany);
+            }
+        }
+    } catch (Throwable $mailError) {
+        mailLog('dashboard approval notification failed: ' . $mailError->getMessage());
+    }
+
+    jsonResponse([
+        'success' => true,
+        'decision' => $approved ? 'approved' : 'rejected',
+        'trial_ends_at' => $decision['trial_ends_at'],
+    ]);
+}
+
 if ($action === 'change_password') {
     $currentUserId = (int) ($user['id'] ?? 0);
+    $firstName = trim((string) ($input['first_name'] ?? ''));
+    $lastName = trim((string) ($input['last_name'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
     $currentPassword = (string) ($input['current_password'] ?? '');
     $newPassword = (string) ($input['new_password'] ?? '');
     $newPasswordConfirm = (string) ($input['new_password_confirm'] ?? '');
 
+    // The current password authorises every change made here, password or not.
     $currentUserRow = $userModel->findById($currentUserId);
     if (!$currentUserRow || !password_verify($currentPassword, $currentUserRow['password'])) {
         jsonResponse(['success' => false, 'error' => t('auth.current_password_incorrect')], 400);
     }
 
-    $passwordStrengthError = validatePasswordStrength($newPassword);
-    if ($passwordStrengthError !== null) {
-        jsonResponse(['success' => false, 'error' => $passwordStrengthError], 400);
+    if ($firstName === '' || $lastName === '') {
+        jsonResponse(['success' => false, 'error' => t('auth.name_required')], 400);
     }
 
-    if ($newPassword !== $newPasswordConfirm) {
-        jsonResponse(['success' => false, 'error' => t('auth.password_mismatch')], 400);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        jsonResponse(['success' => false, 'error' => t('auth.email_invalid')], 400);
     }
 
-    $updateStmt = $pdo->prepare('UPDATE users SET password = :password WHERE id = :id');
-    $updateStmt->execute([
-        'password' => password_hash($newPassword, PASSWORD_DEFAULT),
+    $existingByEmail = $userModel->findByEmail($email);
+    if ($existingByEmail && (int) ($existingByEmail['id'] ?? 0) !== $currentUserId) {
+        jsonResponse(['success' => false, 'error' => t('auth.email_taken')], 400);
+    }
+
+    // A new password is optional: leaving both fields empty updates the profile only.
+    $wantsPasswordChange = $newPassword !== '' || $newPasswordConfirm !== '';
+    if ($wantsPasswordChange) {
+        $passwordStrengthError = validatePasswordStrength($newPassword);
+        if ($passwordStrengthError !== null) {
+            jsonResponse(['success' => false, 'error' => $passwordStrengthError], 400);
+        }
+
+        if ($newPassword !== $newPasswordConfirm) {
+            jsonResponse(['success' => false, 'error' => t('auth.password_mismatch')], 400);
+        }
+    }
+
+    $updateFields = ['first_name = :first_name', 'last_name = :last_name', 'email = :email'];
+    $updateParams = [
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'email' => $email,
         'id' => $currentUserId,
-    ]);
+    ];
+    if ($wantsPasswordChange) {
+        $updateFields[] = 'password = :password';
+        $updateParams['password'] = password_hash($newPassword, PASSWORD_DEFAULT);
+    }
 
-    jsonResponse(['success' => true]);
+    $updateStmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $updateFields) . ' WHERE id = :id');
+    $updateStmt->execute($updateParams);
+
+    // Keep the session payload in sync so the header stops showing stale details.
+    if (isset($_SESSION['auth_user']) && is_array($_SESSION['auth_user'])) {
+        $_SESSION['auth_user']['first_name'] = $firstName;
+        $_SESSION['auth_user']['last_name'] = $lastName;
+        $_SESSION['auth_user']['email'] = $email;
+    }
+
+    jsonResponse(['success' => true, 'password_changed' => $wantsPasswordChange]);
 }
 
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
@@ -3184,7 +3533,14 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             jsonResponse(['success' => false, 'error' => 'assignment_id is required'], 400);
         }
 
-        $unassignLookup = $pdo->prepare('SELECT work_date FROM user_shifts WHERE id = :id LIMIT 1');
+        // Read the employee before the update clears user_id, so the removal can be emailed.
+        $unassignLookup = $pdo->prepare(
+            'SELECT us.work_date, us.user_id, s.name AS shift_name, s.start_time, s.end_time, d.name AS department_name
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE us.id = :id LIMIT 1'
+        );
         $unassignLookup->execute(['id' => $assignmentId]);
         $unassignRow = $unassignLookup->fetch(PDO::FETCH_ASSOC) ?: [];
         $unassignDate = (string) ($unassignRow['work_date'] ?? '');
@@ -3194,6 +3550,9 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
         $update = $pdo->prepare('UPDATE user_shifts SET user_id = NULL, status = "open", updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $update->execute(['id' => $assignmentId]);
+
+        notifyShiftChange($pdo, (int) ($unassignRow['user_id'] ?? 0), $unassignRow, 'removed');
+
         jsonResponse([
             'success' => true,
             'ok' => true,
@@ -3395,6 +3754,16 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     );
     $assignmentLookup->execute(['id' => $assignmentId]);
     $assignment = $assignmentLookup->fetch(PDO::FETCH_ASSOC);
+
+    if (is_array($assignment)) {
+        notifyShiftChange(
+            $pdo,
+            (int) ($assignment['user_id'] ?? 0),
+            $assignment,
+            $action === 'move_shift' ? 'moved' : 'assigned'
+        );
+    }
+
     jsonResponse(['success' => true, 'ok' => true, 'assignment' => $assignment]);
 }
 

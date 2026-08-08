@@ -183,6 +183,19 @@ try {
                 ]);
             }
             $company = $companyModel->findById($id);
+
+            // Tell the super admins a new company is live.
+            try {
+                $superAdmins = $pdo->query(
+                    "SELECT first_name, last_name, email FROM users WHERE role = 'super_admin' AND status = 'active'"
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $currentActor = currentUser() ?? [];
+                $actorName = trim((string) (($currentActor['first_name'] ?? '') . ' ' . ($currentActor['last_name'] ?? '')));
+                sendCompanyCreatedEmail($company ?? $data, $superAdmins, $actorName);
+            } catch (Throwable $mailError) {
+                mailLog('company_created notification failed: ' . $mailError->getMessage());
+            }
+
             jsonResponse(['ok' => true, 'company' => $company]);
             break;
 

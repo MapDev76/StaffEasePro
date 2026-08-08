@@ -6,7 +6,7 @@ Options -Indexes
     RewriteEngine On
 
     # Block direct access to internal source folders.
-    RewriteRule ^(?:backend|config|db|scripts)(?:/|$) - [F,L]
+    RewriteRule ^(?:backend|config|db|scripts|bin|storage)(?:/|$) - [F,L]
     RewriteRule (^|/)\. - [F,L]
 
     # Keep existing files and folders accessible, otherwise route to the front controller.

@@ -2,3 +2,7 @@
 env.example
 config/.database.php
 Project.agent.md
+config/mail.php
+config/mail.production.php
+storage/logs/
+config/database.php

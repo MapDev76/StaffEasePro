@@ -1,14 +1,20 @@
-<!-- Public self-service registration: creates a new company + its first admin user. -->
+<!-- Public self-service registration: collects full company + contact details
+     and opens an authorization request awaiting the platform owner's approval. -->
 <?php
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
 $registerErrors = $registerErrors ?? [];
-$formValues = $formValues ?? ['company_name' => '', 'first_name' => '', 'last_name' => '', 'email' => ''];
+$formValues = array_merge([
+    'company_name' => '', 'company_type' => 'other', 'vat_number' => '', 'address' => '',
+    'city' => '', 'province' => '', 'zip_code' => '', 'company_phone' => '', 'company_email' => '',
+    'first_name' => '', 'last_name' => '', 'contact_role' => '', 'email' => '', 'phone' => '',
+], $formValues ?? []);
 $signupCaptcha = $signupCaptcha ?? ['a' => 0, 'b' => 0];
+$signupCompanyTypes = $signupCompanyTypes ?? ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'];
 ?>
-<div class="auth-card">
+<div class="auth-card signup-card">
     <h1><?php echo e(t('signup.heading')); ?></h1>
     <p><?php echo e(t('signup.subheading')); ?></p>
 
@@ -27,32 +33,99 @@ $signupCaptcha = $signupCaptcha ?? ['a' => 0, 'b' => 0];
         </div>
     <?php endif; ?>
 
-    <form action="<?php echo appUrl('register'); ?>" method="post" class="login-form">
+    <form action="<?php echo appUrl('register'); ?>" method="post" class="login-form signup-form">
         <div class="signup-hp-field" aria-hidden="true">
             <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
-        <div>
-            <input type="text" id="company_name" placeholder="<?php echo e(t('signup.company_name_label')); ?>" name="company_name" value="<?php echo e($formValues['company_name']); ?>" required>
-        </div>
-        <div>
-            <input type="text" id="first_name" placeholder="<?php echo e(t('signup.first_name_label')); ?>" name="first_name" value="<?php echo e($formValues['first_name']); ?>" required>
-        </div>
-        <div>
-            <input type="text" id="last_name" placeholder="<?php echo e(t('signup.last_name_label')); ?>" name="last_name" value="<?php echo e($formValues['last_name']); ?>" required>
-        </div>
-        <div>
-            <input type="email" id="email" placeholder="<?php echo e(t('signup.email_label')); ?>" name="email" value="<?php echo e($formValues['email']); ?>" required>
-        </div>
-        <div>
-            <input type="password" id="password" placeholder="<?php echo e(t('signup.password_label')); ?>" name="password" minlength="8" required>
-        </div>
-        <div>
-            <input type="password" id="password_confirm" placeholder="<?php echo e(t('signup.password_confirm_label')); ?>" name="password_confirm" minlength="8" required>
-        </div>
+
+        <fieldset class="signup-fieldset">
+            <legend><?php echo e(t('signup.section_company')); ?></legend>
+
+            <label class="signup-field">
+                <span><?php echo e(t('signup.company_name_label')); ?> *</span>
+                <input type="text" id="company_name" name="company_name" value="<?php echo e($formValues['company_name']); ?>" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.company_type_label')); ?></span>
+                <select id="company_type" name="company_type">
+                    <?php foreach ($signupCompanyTypes as $typeOption): ?>
+                        <option value="<?php echo e($typeOption); ?>" <?php echo $formValues['company_type'] === $typeOption ? 'selected' : ''; ?>>
+                            <?php echo e(t('crud.company_type_' . $typeOption)); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.vat_number_label')); ?></span>
+                <input type="text" id="vat_number" name="vat_number" value="<?php echo e($formValues['vat_number']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.address_label')); ?></span>
+                <input type="text" id="address" name="address" value="<?php echo e($formValues['address']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.city_label')); ?> *</span>
+                <input type="text" id="city" name="city" value="<?php echo e($formValues['city']); ?>" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.province_label')); ?></span>
+                <input type="text" id="province" name="province" value="<?php echo e($formValues['province']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.zip_code_label')); ?></span>
+                <input type="text" id="zip_code" name="zip_code" value="<?php echo e($formValues['zip_code']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.company_phone_label')); ?></span>
+                <input type="tel" id="company_phone" name="company_phone" value="<?php echo e($formValues['company_phone']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.company_email_label')); ?></span>
+                <input type="email" id="company_email" name="company_email" value="<?php echo e($formValues['company_email']); ?>">
+            </label>
+        </fieldset>
+
+        <fieldset class="signup-fieldset">
+            <legend><?php echo e(t('signup.section_contact')); ?></legend>
+
+            <label class="signup-field">
+                <span><?php echo e(t('signup.first_name_label')); ?> *</span>
+                <input type="text" id="first_name" name="first_name" value="<?php echo e($formValues['first_name']); ?>" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.last_name_label')); ?> *</span>
+                <input type="text" id="last_name" name="last_name" value="<?php echo e($formValues['last_name']); ?>" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.contact_role_label')); ?></span>
+                <input type="text" id="contact_role" name="contact_role" value="<?php echo e($formValues['contact_role']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.email_label')); ?> *</span>
+                <input type="email" id="email" name="email" value="<?php echo e($formValues['email']); ?>" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.phone_label')); ?></span>
+                <input type="tel" id="phone" name="phone" value="<?php echo e($formValues['phone']); ?>">
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.password_label')); ?> *</span>
+                <input type="password" id="password" name="password" minlength="8" required>
+            </label>
+            <label class="signup-field">
+                <span><?php echo e(t('signup.password_confirm_label')); ?> *</span>
+                <input type="password" id="password_confirm" name="password_confirm" minlength="8" required>
+            </label>
+            <p class="signup-hint"><?php echo e(t('auth.password_requirements_hint')); ?></p>
+        </fieldset>
+
         <div class="signup-captcha-row">
             <label for="captcha_answer"><?php echo e(t('signup.captcha_label', ['a' => $signupCaptcha['a'], 'b' => $signupCaptcha['b']])); ?></label>
             <input type="text" inputmode="numeric" id="captcha_answer" name="captcha_answer" required>
         </div>
+
+        <p class="signup-hint"><?php echo e(t('signup.approval_notice', ['days' => (string) trialPeriodDays()])); ?></p>
+
         <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
         <div>
             <button type="submit"><?php echo e(t('signup.submit_button')); ?></button>

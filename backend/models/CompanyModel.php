@@ -255,7 +255,21 @@ class CompanyModel
             $selectParts[] = 'c.is_active';
         }
 
+        // Approval/trial columns are added at runtime by
+        // ensureCompanyApprovalSchema(), so they may not exist yet.
+        foreach (['approval_status', 'trial_ends_at'] as $approvalColumn) {
+            if ($this->hasCompanyColumn($approvalColumn)) {
+                $selectParts[] = 'c.' . $approvalColumn;
+            }
+        }
+
         $groupByParts = ['c.id', 'c.name', 'c.city'];
+
+        foreach (['approval_status', 'trial_ends_at'] as $approvalColumn) {
+            if ($this->hasCompanyColumn($approvalColumn)) {
+                $groupByParts[] = 'c.' . $approvalColumn;
+            }
+        }
 
         if ($this->hasCompanyColumn('logo_path')) {
             $groupByParts[] = 'c.logo_path';

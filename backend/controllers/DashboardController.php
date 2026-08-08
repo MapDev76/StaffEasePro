@@ -886,6 +886,10 @@ $dashboardModalOpenShiftChoices = $modalOpenShiftChoices;
 $moduleRows['recent_connections'] = $recentConnections;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);
 
+// Sign-up requests waiting for a decision, shown on the super admin directory
+// dashboard alongside the one-click links already sent by email.
+$dashboardPendingApprovals = $isSuperAdminDirectoryView ? pendingCompanyApprovals($pdo) : [];
+
 $dashboardOnboardingSteps = [];
 if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
     $dashboardOnboardingSteps = [

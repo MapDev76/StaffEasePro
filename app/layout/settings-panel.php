@@ -21,6 +21,8 @@ $scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? '')
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
+// On the super admin directory dashboard no company is in scope, so only the cross-company sections apply.
+$showCompanyScopedSettings = !($isSuperAdminDirectoryView ?? false);
 $settingsSimpleMode = true;
 $commercialVideos = getCommercialVideos();
 $canCreateDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
@@ -684,6 +686,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <p id="settings-modal-subtitle" class="crud-modal-subtitle"><?php echo e(t('settings.subtitle')); ?></p>
             </div>
             <?php $scopeCompanyLogoUrl = $resolveCompanyLogoUrl($scopeCompanyLogoPath); ?>
+            <?php if ($showCompanyScopedSettings): ?>
             <div class="settings-summary settings-summary--compact">
                 <div class="settings-summary-card">
                     <span class="settings-summary-label"><?php echo e(t('settings.company')); ?></span>
@@ -707,8 +710,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <strong><?php echo count($shifts); ?></strong>
                 </div>
             </div>
+            <?php endif; ?>
 
-            <?php if ($currentRole === 'super_admin' && !empty($scopeCompanies)): ?>
+            <?php if ($showCompanyScopedSettings && $currentRole === 'super_admin' && !empty($scopeCompanies)): ?>
                 <form method="get" class="settings-company-switcher">
                     <input type="hidden" name="route" value="dashboard">
                     <input type="hidden" name="modal" value="settings">
@@ -732,6 +736,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <button type="button" class="settings-tab" data-settings-tab="companies"><?php echo e(t('common.companies')); ?></button>
                 <button type="button" class="settings-tab" data-settings-tab="commercial-videos"><?php echo e(t('settings.commercial_videos')); ?></button>
             <?php endif; ?>
+            <?php if ($showCompanyScopedSettings): ?>
             <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
             <?php if ($currentRole !== 'department_manager'): ?>
                 <button type="button" class="settings-tab" data-settings-tab="departments"><?php echo e(t('settings.departments')); ?></button>
@@ -742,6 +747,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="assignment-planner"><?php echo e(t('settings.assignment_planner', ['fallback' => 'Shift Planner'])); ?></button>
             <button type="button" class="settings-tab" data-settings-tab="attendances"><?php echo e(t('settings.attendances')); ?></button>
+            <?php endif; ?>
         </div>
 
         <div class="crud-modal-body settings-modal-body">
@@ -894,6 +900,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
             </section>
             <?php endif; ?>
 
+            <?php if ($showCompanyScopedSettings): ?>
             <section class="crud-panel settings-panel" data-settings-panel="assignment-planner" hidden>
                 <?php
                     $plannerAutoAssignableShiftOptions = [];
@@ -2379,38 +2386,6 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <?php endif; ?>
                 </div>
 
-                <section class="settings-hours-report" data-user-hours-report>
-                    <div class="settings-panel-head">
-                        <div>
-                            <h4><?php echo e(t('settings.employee_hours_report_title', ['fallback' => 'Monthly hours report'])); ?></h4>
-                            <p class="crud-modal-subtitle"><?php echo e(t('settings.employee_hours_report_hint', ['fallback' => 'Historical worked hours and monthly planned hours by employee.'])); ?></p>
-                        </div>
-                        <div class="settings-hours-report-controls">
-                            <label class="settings-field">
-                                <?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?>
-                                <input type="month" data-hours-report-month value="<?php echo e(date('Y-m')); ?>">
-                            </label>
-                            <button type="button" class="admin-action-link admin-action-link-secondary" data-hours-report-refresh>
-                                <?php echo e(t('settings.refresh_hours_report_label', ['fallback' => 'Refresh report'])); ?>
-                            </button>
-                            <button type="button" class="admin-action-link" data-hours-report-print-all>
-                                <?php echo e(t('settings.print_hours_report_label', ['fallback' => 'Print monthly report'])); ?>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="settings-list-wrap settings-hours-report-wrap">
-                        <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-hours-report">
-                            <strong><?php echo e(t('settings.employee_label', ['fallback' => 'Employee'])); ?></strong>
-                            <span><?php echo e(t('settings.hours_worked_label', ['fallback' => 'Worked (historical)'])); ?></span>
-                            <span><?php echo e(t('settings.hours_planned_label', ['fallback' => 'Planned (forecast)'])); ?></span>
-                            <span><?php echo e(t('settings.hours_delta_label', ['fallback' => 'Delta'])); ?></span>
-                            <span><?php echo e(t('settings.hours_override_label', ['fallback' => 'Worked override'])); ?></span>
-                            <span><?php echo e(t('settings.note_label', ['fallback' => 'Note'])); ?></span>
-                            <span><?php echo e(t('common.action')); ?></span>
-                        </div>
-                        <div data-hours-report-body></div>
-                    </div>
-                </section>
             </section>
 
             <section class="crud-panel settings-panel" data-settings-panel="shifts" hidden>
@@ -2755,6 +2730,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <?php endif; ?>
                 </div>
             </section>
+            <?php endif; ?>
         </div>
 
     </div>

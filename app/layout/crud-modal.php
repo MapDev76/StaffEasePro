@@ -395,12 +395,7 @@ $basePath = $basePath ?? (function () {
                                 if ($recipientLabel === '') {
                                     $recipientLabel = 'User #' . (int) ($user['id'] ?? 0);
                                 }
-                                $recipientRoleLabel = match ($recipientRole) {
-                                    'super_admin' => 'Super Admin',
-                                    'admin' => 'Admin',
-                                    'department_manager' => 'Manager',
-                                    default => 'Employee',
-                                };
+                                $recipientRoleLabel = t('roles.' . (in_array($recipientRole, ['super_admin', 'admin', 'department_manager'], true) ? $recipientRole : 'employee'));
                             ?>
                             <option value="<?php echo (int) $user['id']; ?>"
                                     data-role="<?php echo e($recipientRole); ?>"
@@ -468,8 +463,21 @@ $basePath = $basePath ?? (function () {
                             <div class="company-card-meta"><?php echo e(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')); ?> • <?php echo e($document['upload_date'] ?? ''); ?></div>
                         </div>
                         <div class="company-card-actions company-card-actions--inline">
-                            <span class="company-card-chip"><?php echo e($document['document_type'] ?? t('crud.other')); ?></span>
-                            <span class="company-card-chip" data-document-status-chip><?php echo e($document['status'] ?? t('crud.pending')); ?></span>
+                            <?php
+                                // The DB stores raw enum values; show them translated.
+                                $docTypeValue = (string) ($document['document_type'] ?? 'other');
+                                $docStatusValue = (string) ($document['status'] ?? 'pending');
+                                $docTypeLabel = in_array($docTypeValue, ['contract', 'medical_certificate', 'id_scan', 'other'], true)
+                                    ? t('crud.doc_type_' . $docTypeValue)
+                                    : $docTypeValue;
+                                $docStatusLabel = in_array($docStatusValue, ['valid', 'expired', 'pending', 'archived'], true)
+                                    ? t('crud.doc_status_' . $docStatusValue)
+                                    : $docStatusValue;
+                            ?>
+                            <span class="company-card-chip"><?php echo e($docTypeLabel); ?></span>
+                            <span class="company-card-chip" data-document-status-chip
+                                  data-label-valid="<?php echo e(t('crud.doc_status_valid')); ?>"
+                                  data-label-archived="<?php echo e(t('crud.doc_status_archived')); ?>"><?php echo e($docStatusLabel); ?></span>
                             <?php if (!empty($document['signed_at'])): ?>
                                 <span class="company-card-chip"><?php echo e(t('crud.signed')); ?><?php if (!empty($document['signed_page'])): ?> <?php echo e('P.' . (int) $document['signed_page']); ?><?php endif; ?></span>
                             <?php endif; ?>

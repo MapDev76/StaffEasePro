@@ -74,6 +74,9 @@
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
+    var firstName = document.getElementById('change-password-first-name');
+    var lastName = document.getElementById('change-password-last-name');
+    var email = document.getElementById('change-password-email');
     var current = document.getElementById('change-password-current');
     var next = document.getElementById('change-password-new');
     var confirmField = document.getElementById('change-password-new-confirm');
@@ -82,6 +85,9 @@
 
     window.AppAPI.postJSON(window.DashboardConfig.apiDashboard, {
       action: 'change_password',
+      first_name: firstName.value,
+      last_name: lastName.value,
+      email: email.value,
       current_password: current.value,
       new_password: next.value,
       new_password_confirm: confirmField.value,
@@ -98,9 +104,14 @@
         return;
       }
       if (feedback && feedback.success) {
-        feedback.success('Done', 'Password updated successfully.');
+        feedback.success('Done', result.password_changed ? 'Password updated successfully.' : 'Account updated successfully.');
       }
-      form.reset();
+      // Keep the profile fields showing the saved values; only clear passwords.
+      current.value = '';
+      next.value = '';
+      next.type = 'password';
+      confirmField.value = '';
+      confirmField.type = 'password';
       if (changePasswordModal) {
         changePasswordModal.hidden = true;
       }

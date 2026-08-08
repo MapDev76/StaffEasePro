@@ -35,5 +35,7 @@ $basePath = $basePath ?? (function () {
         </div>
     </form>
 
+    <p><a href="<?php echo appUrl('forgot-password'); ?>"><?php echo e(t('auth.forgot_password_link')); ?></a></p>
+
     <p><?php echo e(t('signup.no_account_prefix')); ?> <a href="<?php echo appUrl('register'); ?>"><?php echo e(t('signup.home_cta')); ?></a></p>
 </div>

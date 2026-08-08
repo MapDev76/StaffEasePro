@@ -170,6 +170,20 @@ try {
                 $userModel->setDepartmentLinks($id, $departmentIds);
             }
             $user = $userModel->findById($id);
+
+            // Welcome email. The plain password only exists here, before hashing.
+            try {
+                $newUserCompanyName = '';
+                if ((int) $assignedCompanyId > 0) {
+                    $companyLookup = $pdo->prepare('SELECT name FROM companies WHERE id = :id LIMIT 1');
+                    $companyLookup->execute(['id' => (int) $assignedCompanyId]);
+                    $newUserCompanyName = (string) ($companyLookup->fetchColumn() ?: '');
+                }
+                sendUserCreatedEmail($user ?? $data, $requestedPassword, $newUserCompanyName);
+            } catch (Throwable $mailError) {
+                mailLog('user_created notification failed: ' . $mailError->getMessage());
+            }
+
             jsonResponse(['ok' => true, 'user' => $user]);
             break;
 

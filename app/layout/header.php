@@ -15,7 +15,7 @@
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
 $locale = appLocale();
-$isPublicPage = in_array($route, ['home', 'login', 'register'], true);
+$isPublicPage = in_array($route, ['home', 'login', 'register', 'forgot-password', 'reset-password', 'company-approval'], true);
 $currentRole = $currentUser['role'] ?? null;
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
@@ -121,7 +121,7 @@ if ($route === 'home') {
         'icon' => 'log-in.svg',
         'alt' => t('common.login'),
     ];
-} elseif ($route === 'login' || $route === 'register') {
+} elseif (in_array($route, ['login', 'register', 'forgot-password', 'reset-password', 'company-approval'], true)) {
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('home'),
@@ -129,9 +129,44 @@ if ($route === 'home') {
         'icon' => 'home.svg',
         'alt' => t('common.home'),
     ];
+} elseif ($currentUser !== null && ($accountGateState ?? null) !== null) {
+    // Company awaiting approval / rejected / past its trial: the app is locked,
+    // so every action icon would be a dead end. Only the exit stays.
+    $rightIcons = [];
+    $logoutIcon = [
+        'type' => 'link',
+        'href' => appUrl('logout'),
+        'title' => t('common.logout'),
+        'icon' => 'log-out.svg',
+        'alt' => t('common.logout'),
+    ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
+
+    // Notification bell: available to any logged-in user on dashboard or
+    // my-space, since general notices (renewal reminders, ...) are addressed
+    // to a specific account regardless of which of the two routes they land on.
+    $headerUnreadNotifications = 0;
     if (in_array($route, ['dashboard', 'my-space'], true)) {
+        try {
+            $headerUnreadNotifications = unreadGeneralNotificationCount(getPDO(), (int) $currentUser['id']);
+        } catch (Throwable $notificationsError) {
+            $headerUnreadNotifications = 0;
+        }
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => t('notifications.title'),
+            'target' => 'modal-notifications',
+            'icon' => 'bell-electric.svg',
+            'alt' => t('notifications.title'),
+            'badge' => $headerUnreadNotifications,
+        ];
+    }
+
+    // Account settings live on my-space for everyone; on the dashboard they stay
+    // available to super admins only.
+    $canOpenAccountModal = $route === 'my-space' || ($route === 'dashboard' && $role === 'super_admin');
+    if ($canOpenAccountModal) {
         $rightIcons[] = [
             'type' => 'button',
             'title' => t('auth.change_password_title'),
@@ -164,6 +199,15 @@ if ($route === 'home') {
             'icon' => 'print-outline.svg',
             'alt' => t('common.print'),
         ];
+        if ($role === 'admin') {
+            $rightIcons[] = [
+                'type' => 'button',
+                'title' => t('notifications.compose_title'),
+                'target' => 'modal-send-notification',
+                'icon' => 'mail-plus.svg',
+                'alt' => t('notifications.compose_title'),
+            ];
+        }
         if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
             $rightIcons[] = [
                 'type' => 'tour',
@@ -219,7 +263,7 @@ if ($isPublicInfoRoute) {
 $isLeadershipDashboard = $route === 'dashboard' && $currentUser !== null
     && in_array((string) ($currentUser['role'] ?? ''), ['super_admin', 'admin', 'department_manager'], true);
 
-if ($isLeadershipDashboard) {
+if ($isLeadershipDashboard && ($accountGateState ?? null) === null) {
     $isItalianLocale = str_starts_with(strtolower((string) $locale), 'it');
     $isFrenchLocale = str_starts_with(strtolower((string) $locale), 'fr');
     $settingsLabel = $isItalianLocale ? 'Parametri' : ($isFrenchLocale ? 'Parametres' : t('common.settings'));
@@ -238,11 +282,13 @@ if ($isLeadershipDashboard) {
         'target' => 'modal-settings',
         'entity' => 'settings',
     ];
-    $mobileMenuItems[] = [
-        'type' => 'link',
-        'href' => appUrl('dashboard', $connectionRouteParams),
-        'label' => $connectionLabel,
-    ];
+    if (!($isSuperAdminDirectoryView ?? false)) {
+        $mobileMenuItems[] = [
+            'type' => 'link',
+            'href' => appUrl('dashboard', $connectionRouteParams),
+            'label' => $connectionLabel,
+        ];
+    }
     $mobileMenuItems[] = [
         'type' => 'button',
         'label' => t('common.documents'),
@@ -251,16 +297,32 @@ if ($isLeadershipDashboard) {
     ];
     $mobileMenuItems[] = [
         'type' => 'button',
-        'label' => t('common.print'),
-        'target' => 'modal-print',
+        'label' => t('notifications.title') . (($headerUnreadNotifications ?? 0) > 0 ? ' (' . (int) $headerUnreadNotifications . ')' : ''),
+        'target' => 'modal-notifications',
         'entity' => '',
     ];
     $mobileMenuItems[] = [
         'type' => 'button',
-        'label' => t('auth.change_password_title'),
-        'target' => 'modal-change-password',
+        'label' => t('common.print'),
+        'target' => 'modal-print',
         'entity' => '',
     ];
+    if ($canOpenAccountModal ?? false) {
+        $mobileMenuItems[] = [
+            'type' => 'button',
+            'label' => t('auth.change_password_title'),
+            'target' => 'modal-change-password',
+            'entity' => '',
+        ];
+    }
+    if (($currentUser['role'] ?? '') === 'admin') {
+        $mobileMenuItems[] = [
+            'type' => 'button',
+            'label' => t('notifications.compose_title'),
+            'target' => 'modal-send-notification',
+            'entity' => '',
+        ];
+    }
     $mobileMenuItems[] = [
         'type' => 'tour',
         'label' => t('onboarding.relaunch_button_label'),
@@ -374,6 +436,9 @@ if (is_array($logoutIcon)) {
                                     <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
                                 <?php else: ?>
                                     <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                                <?php endif; ?>
+                                <?php if (!empty($iconItem['badge'])): ?>
+                                    <span class="site-icon-badge" data-notifications-badge><?php echo (int) $iconItem['badge'] > 9 ? '9+' : (int) $iconItem['badge']; ?></span>
                                 <?php endif; ?>
                             </button>
                         <?php else: ?>
