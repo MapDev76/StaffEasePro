@@ -6,3 +6,4 @@ config/mail.php
 config/mail.production.php
 storage/logs/
 config/database.php
+config/databse.production.php
