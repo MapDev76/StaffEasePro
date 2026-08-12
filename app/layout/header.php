@@ -199,7 +199,7 @@ if ($route === 'home') {
             'icon' => 'print-outline.svg',
             'alt' => t('common.print'),
         ];
-        if ($role === 'admin') {
+        if (in_array($role, ['admin', 'super_admin', 'department_manager'], true)) {
             $rightIcons[] = [
                 'type' => 'button',
                 'title' => t('notifications.compose_title'),
@@ -208,14 +208,6 @@ if ($route === 'home') {
                 'alt' => t('notifications.compose_title'),
             ];
         }
-        if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-            $rightIcons[] = [
-                'type' => 'tour',
-                'title' => t('onboarding.relaunch_button_label'),
-                'alt' => t('onboarding.relaunch_button_label'),
-            ];
-        }
-
     } else {
         if ($route === 'my-space') {
             if ($role === 'employee') {
@@ -315,7 +307,7 @@ if ($isLeadershipDashboard && ($accountGateState ?? null) === null) {
             'entity' => '',
         ];
     }
-    if (($currentUser['role'] ?? '') === 'admin') {
+    if (in_array($currentUser['role'] ?? '', ['admin', 'super_admin', 'department_manager'], true)) {
         $mobileMenuItems[] = [
             'type' => 'button',
             'label' => t('notifications.compose_title'),
@@ -323,10 +315,6 @@ if ($isLeadershipDashboard && ($accountGateState ?? null) === null) {
             'entity' => '',
         ];
     }
-    $mobileMenuItems[] = [
-        'type' => 'tour',
-        'label' => t('onboarding.relaunch_button_label'),
-    ];
 } else {
     foreach ($rightIcons as $iconItem) {
         if (($iconItem['type'] ?? 'link') === 'button') {
@@ -415,9 +403,7 @@ if (is_array($logoutIcon)) {
                 </button>
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
-                        <?php if (($iconItem['type'] ?? 'link') === 'tour'): ?>
-                            <button type="button" class="site-icon-btn onboarding-tour-relaunch-btn" data-onboarding-tour-relaunch title="<?php echo e($iconItem['title']); ?>" aria-label="<?php echo e($iconItem['title']); ?>">?</button>
-                        <?php elseif (($iconItem['type'] ?? 'link') === 'button'): ?>
+                        <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
                             <button
                                 type="button"
                                 class="site-icon-btn"
@@ -478,9 +464,7 @@ if (is_array($logoutIcon)) {
             </div>
             <div class="site-mobile-drawer-links">
                 <?php foreach ($mobileMenuItems as $item): ?>
-                    <?php if (($item['type'] ?? 'link') === 'tour'): ?>
-                        <button type="button" class="site-mobile-drawer-link" data-onboarding-tour-relaunch data-site-menu-close><?php echo e($item['label']); ?></button>
-                    <?php elseif (($item['type'] ?? 'link') === 'button' && !empty($item['target'])): ?>
+                    <?php if (($item['type'] ?? 'link') === 'button' && !empty($item['target'])): ?>
                         <button
                             type="button"
                             class="site-mobile-drawer-link"

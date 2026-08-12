@@ -53,7 +53,8 @@ $isMySpaceRoute = $route === 'my-space';
 $isLegalRoute = $route === 'legal';
 $isContactsRoute = $route === 'contacts';
 $isCreatorRoute = $route === 'creator';
-$isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute;
+$isGiuliaRoute = $route === 'giulia';
+$isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute || $isGiuliaRoute;
 $isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isRegisterRoute || $isPasswordRecoveryRoute || $isApprovalRoute || $isStaticInfoRoute;
 $locale = appLocale();
 $shouldShowLoadingOverlay = $isDashboardRoute || $isMySpaceRoute;
@@ -123,6 +124,10 @@ $routeMetaByLocale = [
                         'title' => 'StaffEase Pro | Creatore del Progetto',
                         'description' => 'Scopri il creatore di StaffEase Pro e la visione della piattaforma per la gestione operativa del personale.',
                 ],
+                'giulia' => [
+                        'title' => 'StaffEase Pro | Giulia, l\'assistente IA',
+                        'description' => 'Scopri Giulia, l\'assistente con intelligenza artificiale integrata in StaffEase Pro per amministratori e manager di reparto.',
+                ],
                 'login' => [
                         'title' => 'StaffEase Pro | Accesso Sicuro',
                         'description' => 'Accedi in modo sicuro alla tua area StaffEase Pro per gestire team, presenze e documenti.',
@@ -161,6 +166,10 @@ $routeMetaByLocale = [
                         'title' => 'StaffEase Pro | Createur',
                         'description' => 'Decouvrez le createur de StaffEase Pro et la vision produit pour la gestion operationnelle des equipes.',
                 ],
+                'giulia' => [
+                        'title' => 'StaffEase Pro | Giulia, l\'assistante IA',
+                        'description' => 'Decouvrez Giulia, l\'assistante intelligence artificielle integree a StaffEase Pro pour les administrateurs et managers de departement.',
+                ],
                 'login' => [
                         'title' => 'StaffEase Pro | Connexion Securisee',
                         'description' => 'Connexion securisee a votre espace StaffEase Pro pour piloter planning, presences et documents.',
@@ -198,6 +207,10 @@ $routeMetaByLocale = [
                 'creator' => [
                         'title' => 'StaffEase Pro | Project Creator',
                         'description' => 'Meet the creator of StaffEase Pro and discover the platform mission.',
+                ],
+                'giulia' => [
+                        'title' => 'StaffEase Pro | Giulia, the AI assistant',
+                        'description' => 'Meet Giulia, the AI assistant built into StaffEase Pro for administrators and department managers.',
                 ],
                 'login' => [
                         'title' => 'StaffEase Pro | Secure Login',
@@ -407,6 +420,7 @@ if ($accountGateState !== null) {
         <div class="site-reveal-footer-inner">
                 <a class="site-reveal-footer-link" href="<?php echo e(appUrl('legal')); ?>"><?php echo e(t('common.legal_mentions')); ?></a>
                 <a class="site-reveal-footer-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial')); ?></a>
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('giulia')); ?>"><?php echo e(t('giulia_page.heading')); ?></a>
                 <a class="site-reveal-footer-link" href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts')); ?></a>
                 <a class="site-reveal-footer-link" href="<?php echo e(appUrl('creator')); ?>"><?php echo e(t('common.app_creator')); ?></a>
         </div>
@@ -415,8 +429,21 @@ if ($accountGateState !== null) {
 
 <?php if ($isDashboardRoute): ?>
 <?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
-<?php if ((currentUser()['role'] ?? '') === 'admin' && ($accountGateState ?? null) === null): ?>
+<?php if (in_array(currentUser()['role'] ?? '', ['admin', 'super_admin', 'department_manager'], true) && ($accountGateState ?? null) === null): ?>
 <?php require __DIR__ . '/app/layout/send-notification-modal.php'; ?>
+<?php endif; ?>
+<?php if (in_array(currentUser()['role'] ?? '', ['admin', 'department_manager'], true) && ($accountGateState ?? null) === null): ?>
+<?php require __DIR__ . '/app/layout/assistant-widget.php'; ?>
+<script>
+        window.AssistantLabels = <?php echo json_encode([
+                'empty' => t('assistant.empty'),
+                'thinking' => t('assistant.thinking'),
+                'error' => t('assistant.error'),
+                'confirm' => t('assistant.confirm'),
+                'cancel' => t('assistant.cancel'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/assistant.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assistant.js'); ?>"></script>
 <?php endif; ?>
 <?php endif; ?>
 
@@ -451,6 +478,12 @@ if ($accountGateState !== null) {
                 'error' => t('common.error'),
                 'noRecipients' => t('notifications.compose_no_recipients'),
                 'sentSuccess' => t('notifications.compose_sent_success'),
+                'approve' => t('notifications.approve', ['fallback' => 'Approva']),
+                'reject' => t('notifications.reject', ['fallback' => 'Rifiuta']),
+                'approved' => t('notifications.approved', ['fallback' => 'Approvata']),
+                'rejected' => t('notifications.rejected', ['fallback' => 'Rifiutata']),
+                'from' => t('notifications.from', ['fallback' => 'Da']),
+                'awaitingResponse' => t('notifications.awaiting_response', ['fallback' => 'In attesa della tua risposta']),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/notifications-panel.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/notifications-panel.js'); ?>"></script>
@@ -465,6 +498,7 @@ if ($accountGateState !== null) {
                 apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
                 apiCommercial: '<?php echo appUrl('api-commercial'); ?>',
                 apiShifts: '<?php echo appUrl('api-shifts'); ?>',
+                apiAssistant: '<?php echo appUrl('api-assistant'); ?>',
                 iconsBase: '<?php echo $basePath; ?>/assets/icons/',
                 pdfjsLibSrc: '<?php echo $basePath; ?>/assets/js/vendor/pdfjs/pdf.min.js?v=<?php echo filemtime(__DIR__ . '/assets/js/vendor/pdfjs/pdf.min.js'); ?>',
                 pdfjsWorkerSrc: '<?php echo $basePath; ?>/assets/js/vendor/pdfjs/pdf.worker.min.js'
@@ -475,20 +509,8 @@ if ($accountGateState !== null) {
                 'role' => (string) (currentUser()['role'] ?? ''),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-        window.DashboardOnboarding = <?php echo json_encode([
-                'autoStart' => (bool) ($dashboardShowOnboardingTour ?? false),
-                'steps' => $dashboardOnboardingSteps ?? [],
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-        window.DashboardOnboardingLabels = <?php echo json_encode([
-                'buttonNext' => t('onboarding.button_next'),
-                'buttonBack' => t('onboarding.button_back'),
-                'buttonSkip' => t('onboarding.button_skip'),
-                'buttonFinish' => t('onboarding.button_finish'),
-                'stepProgress' => t('onboarding.step_progress'),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
-<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/onboarding-tour.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/onboarding-tour.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/super-admin-directory.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/super-admin-directory.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
@@ -499,8 +521,63 @@ if ($accountGateState !== null) {
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
+<script>
+        window.WizardLabels = <?php echo json_encode([
+                'shiftNameRequired' => t('wizard.shift_name_required'),
+                'selectDepartment' => t('wizard.select_department'),
+                'selectWeekday' => t('wizard.select_weekday'),
+                'setHours' => t('wizard.set_hours'),
+                'daysPerWeek' => t('wizard.days_per_week'),
+                'restDaysNone' => t('wizard.rest_days_none'),
+                'restDaysCount' => t('wizard.rest_days_count'),
+                'fillRequiredFields' => t('wizard.fill_required_fields'),
+                'done' => t('wizard.done'),
+                'requestFailed' => t('wizard.request_failed'),
+                'loading' => t('settings.loading'),
+                'noShiftsDepartment' => t('wizard.no_shifts_department'),
+                'errorLoadingShifts' => t('wizard.error_loading_shifts'),
+                'kindRest' => t('wizard.kind_rest'),
+                'kindVacation' => t('wizard.kind_vacation'),
+                'kindSick' => t('wizard.kind_sick'),
+                'kindOvertime' => t('wizard.kind_overtime'),
+                'kindWork' => t('wizard.kind_work'),
+                'selectDepartmentPeriodShift' => t('wizard.select_department_period_shift'),
+                'checkingCoverage' => t('wizard.checking_coverage'),
+                'coverageComplete' => t('wizard.coverage_complete'),
+                'coverageGapsSummary' => t('wizard.coverage_gaps_summary'),
+                'coverageGapItem' => t('wizard.coverage_gap_item'),
+                'errorCheckingCoverage' => t('wizard.error_checking_coverage'),
+                'includeEmployee' => t('wizard.include_employee'),
+                'selectWorkShift' => t('wizard.select_work_shift'),
+                'assigningInProgress' => t('wizard.assigning_in_progress'),
+                'assignSummary' => t('wizard.assign_summary'),
+                'assignSummaryShort' => t('wizard.assign_summary_short'),
+                'errorAutoAssign' => t('wizard.error_auto_assign'),
+                'selectDepartmentPeriod' => t('wizard.select_department_period'),
+                'selectAtLeastOneShift' => t('wizard.select_at_least_one_shift'),
+                'includeAtLeastOneEmployee' => t('wizard.include_at_least_one_employee'),
+                'shiftsSelectedCount' => t('wizard.shifts_selected_count'),
+                'employeesIncludedCount' => t('wizard.employees_included_count'),
+                'employeeCol' => t('wizard.employee_col'),
+                'hoursInPeriodCol' => t('wizard.hours_in_period_col'),
+                'conflictsTitle' => t('wizard.conflicts_title'),
+                'conflictItem' => t('wizard.conflict_item'),
+                'weekdaysShort' => [
+                        t('wizard.weekday_sun'),
+                        t('wizard.weekday_mon'),
+                        t('wizard.weekday_tue'),
+                        t('wizard.weekday_wed'),
+                        t('wizard.weekday_thu'),
+                        t('wizard.weekday_fri'),
+                        t('wizard.weekday_sat'),
+                ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shift-wizard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shift-wizard.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shift-planning-wizard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shift-planning-wizard.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
-<?php if ((currentUser()['role'] ?? '') === 'admin'): ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/crud-wizards.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/crud-wizards.js'); ?>"></script>
+<?php if (in_array(currentUser()['role'] ?? '', ['admin', 'super_admin', 'department_manager'], true)): ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/send-notification.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/send-notification.js'); ?>"></script>
 <?php endif; ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/commercial-videos.js?v=<?php echo e($commercialVideosVersion); ?>"></script>

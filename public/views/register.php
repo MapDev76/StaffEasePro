@@ -85,7 +85,7 @@ $signupCompanyTypes = $signupCompanyTypes ?? ['hotel', 'hospital', 'clinic', 'el
             </label>
         </fieldset>
 
-        <fieldset class="signup-fieldset">
+        <fieldset class="signup-fieldset" id="signup-contact-fieldset">
             <legend><?php echo e(t('signup.section_contact')); ?></legend>
 
             <label class="signup-field">
@@ -124,13 +124,36 @@ $signupCompanyTypes = $signupCompanyTypes ?? ['hotel', 'hospital', 'clinic', 'el
             <input type="text" inputmode="numeric" id="captcha_answer" name="captcha_answer" required>
         </div>
 
-        <p class="signup-hint"><?php echo e(t('signup.approval_notice', ['days' => (string) trialPeriodDays()])); ?></p>
+        <p class="signup-hint" data-trial-tour-approval><?php echo e(t('signup.approval_notice', ['days' => (string) trialPeriodDays()])); ?></p>
 
         <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
         <div>
-            <button type="submit"><?php echo e(t('signup.submit_button')); ?></button>
+            <button type="submit" data-trial-tour-submit><?php echo e(t('signup.submit_button')); ?></button>
         </div>
     </form>
 
     <p><?php echo e(t('signup.login_link_prefix')); ?> <a href="<?php echo appUrl('login'); ?>"><?php echo e(t('signup.login_link_cta')); ?></a></p>
 </div>
+
+<?php $trialDays = (string) trialPeriodDays(); ?>
+<script>
+        window.TrialTourConfig = <?php echo json_encode([
+                'autoStart' => true,
+                'steps' => [
+                        ['selector' => null, 'title' => t('trial_tour.step_welcome_title'), 'body' => t('trial_tour.step_welcome_body')],
+                        ['selector' => '.signup-fieldset', 'title' => t('trial_tour.step_company_title'), 'body' => t('trial_tour.step_company_body')],
+                        ['selector' => '#signup-contact-fieldset', 'title' => t('trial_tour.step_contact_title'), 'body' => t('trial_tour.step_contact_body')],
+                        ['selector' => '[data-trial-tour-approval]', 'title' => t('trial_tour.step_approval_title'), 'body' => t('trial_tour.step_approval_body')],
+                        ['selector' => '[data-trial-tour-approval]', 'title' => t('trial_tour.step_trial_title', ['days' => $trialDays]), 'body' => t('trial_tour.step_trial_body', ['days' => $trialDays])],
+                        ['selector' => '[data-trial-tour-submit]', 'title' => t('trial_tour.step_submit_title'), 'body' => t('trial_tour.step_submit_body')],
+                ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        window.TrialTourLabels = <?php echo json_encode([
+                'buttonNext' => t('trial_tour.button_next'),
+                'buttonBack' => t('trial_tour.button_back'),
+                'buttonSkip' => t('trial_tour.button_skip'),
+                'buttonFinish' => t('trial_tour.button_finish'),
+                'stepProgress' => t('trial_tour.step_progress'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
+<script defer src="<?php echo e($basePath); ?>/assets/js/trial-tour.js?v=<?php echo filemtime(__DIR__ . '/../../assets/js/trial-tour.js'); ?>"></script>

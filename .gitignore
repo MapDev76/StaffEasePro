@@ -4,6 +4,8 @@ config/.database.php
 Project.agent.md
 config/mail.php
 config/mail.production.php
+config/claude.php
+config/claude.production.php
 storage/logs/
 config/database.php
 config/databse.production.php

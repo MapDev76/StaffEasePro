@@ -82,6 +82,11 @@ $homeSeoCopy = $homeSeoCopyByLocale[$localeCode] ?? $homeSeoCopyByLocale['en'];
 				<p class="simple-div-title"><?php echo e(t('home.feature_requests_title')); ?></p>
 				<p class="simple-div-content"><?php echo e(t('home.feature_requests_body')); ?></p>
 			</article>
+			<article class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_assistant_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_assistant_body')); ?></p>
+				<p><a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('giulia')); ?>"><?php echo e(t('giulia_page.heading')); ?> →</a></p>
+			</article>
 		</section>
 
 		<section class="simple-div" aria-label="<?php echo e($homeSeoCopy['title']); ?>">

@@ -44,26 +44,52 @@
   }
 
   function renderRow(notification) {
-    var isRead = notification.status === 'read';
+    var status = notification.status || 'pending';
+    var isRead = status === 'read';
+    var isDecided = status === 'approved' || status === 'rejected';
+    var isDeletable = isRead || isDecided;
+    var requiresResponse = !!notification.requires_response;
+    var awaitingResponse = requiresResponse && status === 'pending';
+
     var row = document.createElement('article');
-    row.className = 'notification-row' + (isRead ? ' is-read' : ' is-unread');
+    row.className = 'notification-row' + (isRead || isDecided ? ' is-read' : ' is-unread') + (awaitingResponse ? ' is-awaiting-response' : '');
     row.setAttribute('data-notification-row', '');
-    row.setAttribute('data-status', notification.status || 'pending');
+    row.setAttribute('data-status', status);
     row.setAttribute('data-notification-id', String(notification.id));
+
+    var senderLine = notification.sender_name
+      ? '<span class="notification-row-sender">' + escapeHtml(label('from', 'From')) + ': ' + escapeHtml(notification.sender_name) + '</span>'
+      : '';
+
+    var actionsHtml;
+    if (awaitingResponse) {
+      actionsHtml =
+        '<span class="notification-row-status-badge">' + escapeHtml(label('awaitingResponse', 'Awaiting your response')) + '</span>'
+        + '<button type="button" class="admin-action-link notification-approve">' + escapeHtml(label('approve', 'Approve')) + '</button>'
+        + '<button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger notification-reject">' + escapeHtml(label('reject', 'Reject')) + '</button>';
+    } else {
+      var statusBadge = '';
+      if (status === 'approved') {
+        statusBadge = '<span class="notification-row-status-badge is-approved">' + escapeHtml(label('approved', 'Approved')) + '</span>';
+      } else if (status === 'rejected') {
+        statusBadge = '<span class="notification-row-status-badge is-rejected">' + escapeHtml(label('rejected', 'Rejected')) + '</span>';
+      }
+      actionsHtml = statusBadge
+        + '<button type="button" class="admin-action-link admin-action-link-secondary notification-mark-read"'
+        + (isRead || isDecided ? ' hidden' : '') + '>' + escapeHtml(label('markRead', 'Mark as read')) + '</button>'
+        + '<button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger notification-delete"'
+        + (isDeletable ? '' : ' disabled title="' + escapeHtml(label('deleteRequiresRead', 'Read it first to delete it.')) + '"') + '>'
+        + escapeHtml(label('delete', 'Delete')) + '</button>';
+    }
 
     row.innerHTML =
       '<div class="notification-row-head">'
       + '<strong>' + escapeHtml(notification.title || '') + '</strong>'
       + '<span class="notification-row-date">' + escapeHtml(formatDate(notification.created_at)) + '</span>'
       + '</div>'
+      + senderLine
       + '<p class="notification-row-message">' + escapeHtml(notification.message || '') + '</p>'
-      + '<div class="notification-row-actions">'
-      + '<button type="button" class="admin-action-link admin-action-link-secondary notification-mark-read"'
-      + (isRead ? ' hidden' : '') + '>' + escapeHtml(label('markRead', 'Mark as read')) + '</button>'
-      + '<button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger notification-delete"'
-      + (isRead ? '' : ' disabled title="' + escapeHtml(label('deleteRequiresRead', 'Read it first to delete it.')) + '"') + '>'
-      + escapeHtml(label('delete', 'Delete')) + '</button>'
-      + '</div>';
+      + '<div class="notification-row-actions">' + actionsHtml + '</div>';
 
     return row;
   }
@@ -142,6 +168,18 @@
             deleteBtn.removeAttribute('title');
           }
           updateBadge();
+        });
+      return;
+    }
+
+    if (event.target.closest('.notification-approve') || event.target.closest('.notification-reject')) {
+      var decision = event.target.closest('.notification-approve') ? 'approve' : 'reject';
+      window.AppAPI.postJSON(config.apiDashboard, { action: 'respond_notification', notification_id: notificationId, decision: decision })
+        .then(function (result) {
+          if (!result || !result.success) {
+            return;
+          }
+          load();
         });
       return;
     }

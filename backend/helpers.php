@@ -1735,13 +1735,15 @@ function pendingCompanyApprovals(PDO $pdo): array
 function userGeneralNotifications(PDO $pdo, int $userId, int $limit = 50): array
 {
     $statement = $pdo->prepare(
-        'SELECT id, title, message, status, created_at
-         FROM requests
-         WHERE user_id = :user_id
-           AND type = "notification"
-           AND document_id IS NULL
-           AND recipient_id IS NULL
-         ORDER BY created_at DESC, id DESC
+        'SELECT r.id, r.title, r.message, r.status, r.requires_response, r.created_at,
+                CONCAT(s.first_name, " ", s.last_name) AS sender_name
+         FROM requests r
+         LEFT JOIN users s ON s.id = r.sender_id
+         WHERE r.user_id = :user_id
+           AND r.type = "notification"
+           AND r.document_id IS NULL
+           AND r.recipient_id IS NULL
+         ORDER BY r.created_at DESC, r.id DESC
          LIMIT :limit'
     );
     $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);

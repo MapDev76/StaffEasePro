@@ -13,6 +13,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 ?>
 <section class="dashboard-modal dashboard-schedule-modal" id="modal-schedule" hidden>
+    <div class="schedule-modal-card">
     <button type="button" class="dashboard-modal-close" data-modal-close aria-label="<?php echo e(t('common.close_message')); ?>">&times;</button>
     <h2><?php echo e(t('schedule.title')); ?></h2>
     <p><?php echo e(t('schedule.subtitle')); ?></p>
@@ -88,5 +89,6 @@ $role = $currentUser['role'] ?? 'employee';
         <button type="button" class="admin-action-link"><?php echo e(t('schedule.create')); ?></button>
         <button type="button" class="admin-action-link"><?php echo e(t('schedule.edit')); ?></button>
         <button type="button" class="admin-action-link"><?php echo e(t('schedule.delete')); ?></button>
+    </div>
     </div>
 </section>

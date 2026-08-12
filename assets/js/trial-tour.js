@@ -1,5 +1,5 @@
-window.DashboardOnboardingTour = (function () {
-  var config = window.DashboardOnboarding || { autoStart: false, steps: [] };
+window.TrialTour = (function () {
+  var config = window.TrialTourConfig || { autoStart: false, steps: [] };
   var currentIndex = 0;
   var highlightEl = null;
   var tooltipEl = null;
@@ -30,31 +30,6 @@ window.DashboardOnboardingTour = (function () {
     }
     highlightEl = null;
     tooltipEl = null;
-  }
-
-  function closeSettingsModal() {
-    var modal = document.getElementById('modal-settings');
-    if (!modal || modal.hidden) {
-      return;
-    }
-    var closeBtn = modal.querySelector('[data-modal-close]');
-    if (closeBtn) {
-      closeBtn.click();
-    }
-  }
-
-  function openSettingsTab(tabName) {
-    var modal = document.getElementById('modal-settings');
-    var gear = document.querySelector('[data-modal-target="modal-settings"][data-modal-entity="settings"]');
-    if (modal && modal.hidden && gear) {
-      gear.click();
-    }
-    if (tabName) {
-      var tabBtn = document.querySelector('[data-settings-tab="' + tabName + '"]');
-      if (tabBtn) {
-        tabBtn.click();
-      }
-    }
   }
 
   function positionHighlight(rect) {
@@ -96,7 +71,7 @@ window.DashboardOnboardingTour = (function () {
     var total = config.steps.length;
     var isFirst = index === 0;
     var isLast = index === total - 1;
-    var labels = window.DashboardOnboardingLabels || {};
+    var labels = window.TrialTourLabels || {};
 
     tooltipEl.innerHTML =
       '<div class="onboarding-tour-step-badge">' + (index + 1) + '</div>' +
@@ -138,13 +113,6 @@ window.DashboardOnboardingTour = (function () {
     }
     currentIndex = index;
 
-    if (step.openSettingsTab) {
-      openSettingsTab(step.openSettingsTab);
-    }
-    if (step.closeSettings) {
-      closeSettingsModal();
-    }
-
     requestAnimationFrame(function () {
       var target = step.selector ? document.querySelector(step.selector) : null;
       var rect = target ? target.getBoundingClientRect() : null;
@@ -170,7 +138,6 @@ window.DashboardOnboardingTour = (function () {
   }
 
   function finish() {
-    closeSettingsModal();
     teardownDom();
   }
 
@@ -184,7 +151,7 @@ window.DashboardOnboardingTour = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    var relaunch = document.querySelector('[data-onboarding-tour-relaunch]');
+    var relaunch = document.querySelector('[data-trial-tour-relaunch]');
     if (relaunch) {
       relaunch.addEventListener('click', start);
     }

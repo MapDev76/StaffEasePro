@@ -5,12 +5,13 @@
    without dashboard planner and admin-heavy styles.
    ============================================= */
 
-@import url('variables.css?v=20260709');
-@import url('base.css?v=20260709');
-@import url('layout.css?v=20260709');
-@import url('navbar.css?v=20260709');
-@import url('components.css?v=20260709');
-@import url('flash.css?v=20260709');
-@import url('responsive.css?v=20260709');
-@import url('home.css?v=20260709');
-@import url('commercial.css?v=20260709');
+@import url('variables.css?v=20260811');
+@import url('base.css?v=20260811');
+@import url('layout.css?v=20260811');
+@import url('navbar.css?v=20260811');
+@import url('components.css?v=20260811');
+@import url('flash.css?v=20260811');
+@import url('responsive.css?v=20260811');
+@import url('home.css?v=20260811');
+@import url('commercial.css?v=20260811');
+@import url('onboarding-tour.css?v=20260812');

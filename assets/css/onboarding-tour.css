@@ -61,11 +61,13 @@
     margin-top: 0.2rem;
 }
 
-.onboarding-tour-relaunch-btn {
-    font-weight: 800;
-    font-size: 1.3rem;
-    line-height: 1;
-    cursor: pointer;
-    font-family: inherit;
-    color: var(--color-text);
+@media (max-width: 600px) {
+    .onboarding-tour-tooltip {
+        left: 16px !important;
+        top: auto !important;
+        bottom: 16px !important;
+        width: calc(100vw - 32px) !important;
+        transform: none !important;
+    }
 }
+

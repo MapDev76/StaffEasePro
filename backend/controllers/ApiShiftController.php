@@ -630,6 +630,282 @@ try {
             jsonResponse(['ok' => true]);
             break;
 
+        case 'ensure_period_coverage': {
+            // Read-only report for the planning wizard (phase 2): which dates in the
+            // chosen period already have at least one occurrence of each selected
+            // shift, and which are still uncovered.
+            $departmentId = (int) ($input['department_id'] ?? 0);
+            $rangeStart = trim((string) ($input['range_start'] ?? ''));
+            $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+            $shiftIds = array_values(array_unique(array_filter(array_map(
+                'intval',
+                is_array($input['shift_ids'] ?? null) ? $input['shift_ids'] : []
+            ))));
+
+            if ($departmentId <= 0 || $rangeStart === '' || $rangeEnd === '' || empty($shiftIds)) {
+                jsonResponse(['ok' => false, 'error' => 'department_id, range_start, range_end and shift_ids are required'], 400);
+            }
+
+            $department = $departmentModel->findById($departmentId);
+            if (!$department) {
+                jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
+            }
+            if ($currentRole === 'admin') {
+                $departmentCompanyId = (int) ($department['company_id'] ?? 0);
+                if ($adminCompanyId <= 0 || $departmentCompanyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                }
+            }
+
+            [$start, $end] = $buildDateRange($rangeStart, $rangeEnd);
+
+            $placeholders = implode(',', array_fill(0, count($shiftIds), '?'));
+            $coverageStmt = $pdo->prepare(
+                "SELECT work_date, shift_id, COUNT(*) AS occurrences
+                 FROM user_shifts
+                 WHERE shift_id IN ($placeholders)
+                   AND work_date BETWEEN ? AND ?
+                   AND status <> 'cancelled'
+                 GROUP BY work_date, shift_id"
+            );
+            $coverageStmt->execute(array_merge($shiftIds, [$start->format('Y-m-d'), $end->format('Y-m-d')]));
+
+            $coveredByDate = [];
+            foreach ($coverageStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $coveredByDate[$row['work_date']][(int) $row['shift_id']] = true;
+            }
+
+            $dates = [];
+            $datesWithGaps = 0;
+            foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                $dateKey = $date->format('Y-m-d');
+                $covered = array_keys($coveredByDate[$dateKey] ?? []);
+                $missing = array_values(array_diff($shiftIds, $covered));
+                if (!empty($missing)) {
+                    $datesWithGaps++;
+                }
+                $dates[] = [
+                    'date' => $dateKey,
+                    'covered_shift_ids' => array_values($covered),
+                    'missing_shift_ids' => $missing,
+                ];
+            }
+
+            jsonResponse([
+                'ok' => true,
+                'dates' => $dates,
+                'summary' => [
+                    'total_dates' => count($dates),
+                    'dates_with_gaps' => $datesWithGaps,
+                ],
+            ]);
+            break;
+        }
+
+        case 'auto_assign_period': {
+            // Simplified auto-assignment for the planning wizard (phase 4). No
+            // presets, no cross-department fallback, no rotating patterns: just
+            // conflict-free assignment of work shifts across the chosen period,
+            // respecting each employee's rest/work day choices for this run, with
+            // simple balancing on hours already assigned in the period.
+            if (!in_array($currentRole, ['admin', 'super_admin', 'department_manager'], true)) {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
+
+            $departmentId = (int) ($input['department_id'] ?? 0);
+            $rangeStart = trim((string) ($input['range_start'] ?? ''));
+            $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+            $workShiftIds = array_values(array_unique(array_filter(array_map(
+                'intval',
+                is_array($input['work_shift_ids'] ?? null) ? $input['work_shift_ids'] : []
+            ))));
+            $employeeIds = array_values(array_unique(array_filter(array_map(
+                'intval',
+                is_array($input['employee_ids'] ?? null) ? $input['employee_ids'] : []
+            ))));
+            $employeeRestWeekdays = is_array($input['employee_rest_weekdays'] ?? null) ? $input['employee_rest_weekdays'] : [];
+
+            if ($departmentId <= 0 || $rangeStart === '' || $rangeEnd === '' || empty($workShiftIds) || empty($employeeIds)) {
+                jsonResponse(['ok' => false, 'error' => 'department_id, range_start, range_end, work_shift_ids and employee_ids are required'], 400);
+            }
+
+            $department = $departmentModel->findById($departmentId);
+            if (!$department) {
+                jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
+            }
+            if ($currentRole === 'admin') {
+                $departmentCompanyId = (int) ($department['company_id'] ?? 0);
+                if ($adminCompanyId <= 0 || $departmentCompanyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                }
+            }
+
+            [$start, $end] = $buildDateRange($rangeStart, $rangeEnd);
+
+            // Rest-day weekdays per employee for this planning run (0=Sun..6=Sat, matching PHP's DateTime 'w').
+            $restWeekdaysByUser = [];
+            foreach ($employeeRestWeekdays as $userIdKey => $weekdayList) {
+                $restWeekdaysByUser[(int) $userIdKey] = $normalizeWeekdays($weekdayList);
+            }
+
+            // Shift templates involved (need start/end time for hour totals and department check).
+            $shiftPlaceholders = implode(',', array_fill(0, count($workShiftIds), '?'));
+            $shiftLookupStmt = $pdo->prepare("SELECT id, department_id, kind, start_time, end_time FROM shifts WHERE id IN ($shiftPlaceholders)");
+            $shiftLookupStmt->execute($workShiftIds);
+            $shiftById = [];
+            foreach ($shiftLookupStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $shiftById[(int) $row['id']] = $row;
+            }
+
+            $shiftHours = static function (array $shift): float {
+                $start = strtotime((string) ($shift['start_time'] ?? '00:00:00'));
+                $end = strtotime((string) ($shift['end_time'] ?? '00:00:00'));
+                if ($start === false || $end === false) {
+                    return 0.0;
+                }
+                $diff = $end - $start;
+                if ($diff <= 0) {
+                    $diff += 86400; // overnight shift
+                }
+                return round($diff / 3600, 2);
+            };
+
+            // Existing assignments in the period, to detect same-day conflicts and starting hour totals.
+            $existingStmt = $pdo->prepare(
+                'SELECT us.id, us.shift_id, us.user_id, us.work_date, us.status, s.start_time, s.end_time
+                 FROM user_shifts us
+                 INNER JOIN shifts s ON s.id = us.shift_id
+                 WHERE us.work_date BETWEEN :range_start AND :range_end
+                   AND us.status <> "cancelled"'
+            );
+            $existingStmt->execute(['range_start' => $start->format('Y-m-d'), 'range_end' => $end->format('Y-m-d')]);
+
+            $busyByUserDate = []; // "userId|date" => true (already has a shift that day)
+            $hoursByUser = [];    // userId => hours already assigned in this period
+            foreach ($existingStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $rowUserId = (int) ($row['user_id'] ?? 0);
+                if ($rowUserId <= 0) {
+                    continue;
+                }
+                $busyByUserDate[$rowUserId . '|' . $row['work_date']] = true;
+                $hoursByUser[$rowUserId] = ($hoursByUser[$rowUserId] ?? 0) + $shiftHours($row);
+            }
+            foreach ($employeeIds as $employeeId) {
+                $hoursByUser[$employeeId] = $hoursByUser[$employeeId] ?? 0;
+            }
+
+            $findOpenSlotStmt = $pdo->prepare(
+                'SELECT id FROM user_shifts
+                 WHERE shift_id = :shift_id AND work_date = :work_date AND user_id IS NULL AND status = "open"
+                 LIMIT 1'
+            );
+            $insertAssignedStmt = $pdo->prepare(
+                'INSERT INTO user_shifts (shift_id, user_id, work_date, status) VALUES (:shift_id, :user_id, :work_date, "assigned")'
+            );
+            $claimOpenSlotStmt = $pdo->prepare(
+                'UPDATE user_shifts SET user_id = :user_id, status = "assigned" WHERE id = :id'
+            );
+
+            $assignedCount = 0;
+            $conflicts = [];
+            $restAssignedCount = 0;
+
+            foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                $dateKey = $date->format('Y-m-d');
+                $weekday = (int) $date->format('w');
+
+                foreach ($workShiftIds as $shiftId) {
+                    $shift = $shiftById[$shiftId] ?? null;
+                    if (!$shift || (int) $shift['department_id'] !== $departmentId || $shift['kind'] !== 'work') {
+                        continue;
+                    }
+
+                    // Already assigned to someone for this shift+date? Nothing to do.
+                    $alreadyAssignedStmt = $pdo->prepare(
+                        'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date AND user_id IS NOT NULL AND status <> "cancelled" LIMIT 1'
+                    );
+                    $alreadyAssignedStmt->execute(['shift_id' => $shiftId, 'work_date' => $dateKey]);
+                    if ($alreadyAssignedStmt->fetchColumn()) {
+                        continue;
+                    }
+
+                    $bestCandidate = null;
+                    $bestHours = null;
+                    foreach ($employeeIds as $employeeId) {
+                        if (!empty($busyByUserDate[$employeeId . '|' . $dateKey])) {
+                            continue; // conflict: already has a shift this day
+                        }
+                        if (in_array($weekday, $restWeekdaysByUser[$employeeId] ?? [], true)) {
+                            continue; // employee asked to rest this weekday
+                        }
+                        $candidateHours = $hoursByUser[$employeeId] ?? 0;
+                        if ($bestHours === null || $candidateHours < $bestHours) {
+                            $bestHours = $candidateHours;
+                            $bestCandidate = $employeeId;
+                        }
+                    }
+
+                    if ($bestCandidate === null) {
+                        $conflicts[] = [
+                            'shift_id' => $shiftId,
+                            'work_date' => $dateKey,
+                            'reason' => 'no_available_employee',
+                        ];
+                        continue;
+                    }
+
+                    $findOpenSlotStmt->execute(['shift_id' => $shiftId, 'work_date' => $dateKey]);
+                    $openSlotId = $findOpenSlotStmt->fetchColumn();
+                    if ($openSlotId) {
+                        $claimOpenSlotStmt->execute(['user_id' => $bestCandidate, 'id' => $openSlotId]);
+                    } else {
+                        $insertAssignedStmt->execute(['shift_id' => $shiftId, 'user_id' => $bestCandidate, 'work_date' => $dateKey]);
+                    }
+
+                    $busyByUserDate[$bestCandidate . '|' . $dateKey] = true;
+                    $hoursByUser[$bestCandidate] = ($hoursByUser[$bestCandidate] ?? 0) + $shiftHours($shift);
+                    $assignedCount++;
+                }
+
+                // Mark rest days chosen for this run, if a rest-kind template exists for the department
+                // and the employee has no other assignment that day.
+                foreach ($employeeIds as $employeeId) {
+                    if (!in_array($weekday, $restWeekdaysByUser[$employeeId] ?? [], true)) {
+                        continue;
+                    }
+                    if (!empty($busyByUserDate[$employeeId . '|' . $dateKey])) {
+                        continue;
+                    }
+                    $restTemplateStmt = $pdo->prepare('SELECT id FROM shifts WHERE department_id = :department_id AND kind = "rest" ORDER BY id ASC LIMIT 1');
+                    $restTemplateStmt->execute(['department_id' => $departmentId]);
+                    $restShiftId = (int) ($restTemplateStmt->fetchColumn() ?: 0);
+                    if ($restShiftId <= 0) {
+                        continue;
+                    }
+                    $insertAssignedStmt->execute(['shift_id' => $restShiftId, 'user_id' => $employeeId, 'work_date' => $dateKey]);
+                    $busyByUserDate[$employeeId . '|' . $dateKey] = true;
+                    $restAssignedCount++;
+                }
+            }
+
+            $employeeSummary = [];
+            foreach ($employeeIds as $employeeId) {
+                $employeeSummary[] = [
+                    'user_id' => $employeeId,
+                    'hours_in_period' => $hoursByUser[$employeeId] ?? 0,
+                ];
+            }
+
+            jsonResponse([
+                'ok' => true,
+                'assigned_count' => $assignedCount,
+                'rest_assigned_count' => $restAssignedCount,
+                'conflicts' => $conflicts,
+                'employee_summary' => $employeeSummary,
+            ]);
+            break;
+        }
+
         default:
             jsonResponse(['ok' => false, 'error' => 'Unknown action'], 400);
     }

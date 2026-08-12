@@ -7,6 +7,23 @@
   var config = window.DashboardConfig;
   var sendAllCheckbox = document.getElementById('send-notification-all');
   var recipientsBox = document.querySelector('[data-notification-recipients]');
+  var companySelect = document.getElementById('send-notification-company');
+  var requireResponseCheckbox = document.getElementById('send-notification-require-response');
+
+  function syncCompanyFilter() {
+    if (!companySelect) {
+      return;
+    }
+    var companyId = companySelect.value;
+    document.querySelectorAll('[data-notification-recipient-row]').forEach(function (row) {
+      var rowCompanyId = row.getAttribute('data-company-id') || '';
+      row.hidden = !!companyId && rowCompanyId !== companyId;
+    });
+  }
+  if (companySelect) {
+    companySelect.addEventListener('change', syncCompanyFilter);
+    syncCompanyFilter();
+  }
 
   function notifyError(message) {
     var feedback = window.DashboardFeedback;
@@ -52,6 +69,11 @@
       }
     }
 
+    if (companySelect && !companySelect.value) {
+      notifyError('Seleziona un\'azienda.');
+      return;
+    }
+
     var submitBtn = document.getElementById('send-notification-submit');
     submitBtn.disabled = true;
 
@@ -61,6 +83,8 @@
       message: message,
       send_to_all: sendToAll ? 1 : 0,
       recipient_ids: recipientIds,
+      requires_response: (requireResponseCheckbox && requireResponseCheckbox.checked) ? 1 : 0,
+      company_id: companySelect ? parseInt(companySelect.value, 10) || 0 : undefined,
     })
       .then(function (result) {
         submitBtn.disabled = false;

@@ -16,6 +16,7 @@ $map = [
     'api-shifts' => __DIR__ . '/ApiShiftController.php',
     'api-dashboard' => __DIR__ . '/ApiDashboardController.php',
     'api-commercial' => __DIR__ . '/ApiCommercialController.php',
+    'api-assistant' => __DIR__ . '/ApiAssistantController.php',
 ];
 
 if (!isset($map[$route])) {
