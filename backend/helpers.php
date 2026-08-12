@@ -77,8 +77,55 @@ function appDefaultLocale(): string
     return 'fr';
 }
 
+/**
+ * Holds a temporary locale override set by withLocale(), so t() can render
+ * content in a recipient's language regardless of the current session's.
+ */
+function appLocaleOverride(?string $locale = null, bool $set = false): ?string
+{
+    static $override = null;
+    if ($set) {
+        $override = $locale;
+    }
+
+    return $override;
+}
+
+/**
+ * Runs $fn with t() forced to resolve against $locale, then restores the
+ * normal session-based resolution. Used for automated content (emails,
+ * in-app notifications) that must reach a company in its own language
+ * instead of the current admin's session language.
+ */
+function withLocale(string $locale, callable $fn)
+{
+    $normalized = in_array($locale, appSupportedLocales(), true) ? $locale : appDefaultLocale();
+    appLocaleOverride($normalized, true);
+    try {
+        return $fn();
+    } finally {
+        appLocaleOverride(null, true);
+    }
+}
+
+/**
+ * A company's configured language, falling back to the app default for
+ * companies created before this field existed (or left unset).
+ */
+function companyLocale(?array $company): string
+{
+    $locale = strtolower(trim((string) ($company['default_locale'] ?? '')));
+
+    return in_array($locale, appSupportedLocales(), true) ? $locale : appDefaultLocale();
+}
+
 function appLocale(): string
 {
+    $override = appLocaleOverride();
+    if ($override !== null) {
+        return $override;
+    }
+
     static $resolved = null;
     if (is_string($resolved) && $resolved !== '') {
         return $resolved;
@@ -1511,6 +1558,9 @@ function ensureCompanyApprovalSchema(PDO $pdo): void
         }
         if (!in_array('contact_role', $existing, true)) {
             $pdo->exec('ALTER TABLE companies ADD COLUMN contact_role VARCHAR(120) NULL');
+        }
+        if (!in_array('default_locale', $existing, true)) {
+            $pdo->exec('ALTER TABLE companies ADD COLUMN default_locale VARCHAR(5) NULL');
         }
 
         $pdo->exec(

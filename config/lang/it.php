@@ -280,6 +280,8 @@ return [
         'logo_file' => 'File logo',
         'logo_path_optional' => 'Percorso logo opzionale',
         'authorized_wifi_ip' => 'IP Wi-Fi autorizzato',
+        'company_default_locale' => 'Lingua predefinita azienda',
+        'company_default_locale_auto' => 'Automatica (lingua della piattaforma)',
         'commercial_videos' => 'Video commerciali',
         'commercial_videos_subtitle' => 'Aggiorna i link YouTube mostrati nella pagina commerciale pubblica.',
         'commercial_video_item' => 'Video',

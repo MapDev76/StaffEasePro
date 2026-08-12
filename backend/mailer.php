@@ -390,39 +390,43 @@ function mailFormatDate(?string $date): string
  * $plainPassword is only known at creation time (it is hashed right after), so
  * it is passed in explicitly rather than read back from the database.
  */
-function sendUserCreatedEmail(array $user, string $plainPassword = '', string $companyName = ''): bool
+function sendUserCreatedEmail(array $user, string $plainPassword = '', string $companyName = '', ?string $companyLocale = null): bool
 {
     if (!mailNotificationEnabled('user_created')) {
         return false;
     }
 
-    $email = trim((string) ($user['email'] ?? ''));
-    $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-    $loginUrl = mailAppUrl('login');
+    $render = function () use ($user, $plainPassword, $companyName): bool {
+        $email = trim((string) ($user['email'] ?? ''));
+        $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $loginUrl = mailAppUrl('login');
 
-    $rows = [t('mail.field_email') => $email];
-    if ($companyName !== '') {
-        $rows[t('mail.field_company')] = $companyName;
-    }
-    if (!empty($user['role'])) {
-        $rows[t('mail.field_role')] = t('roles.' . (string) $user['role']);
-    }
-    if ($plainPassword !== '') {
-        $rows[t('mail.field_temp_password')] = $plainPassword;
-    }
+        $rows = [t('mail.field_email') => $email];
+        if ($companyName !== '') {
+            $rows[t('mail.field_company')] = $companyName;
+        }
+        if (!empty($user['role'])) {
+            $rows[t('mail.field_role')] = t('roles.' . (string) $user['role']);
+        }
+        if ($plainPassword !== '') {
+            $rows[t('mail.field_temp_password')] = $plainPassword;
+        }
 
-    $heading = t('mail.user_created_subject');
-    $intro = t('mail.user_created_intro', ['name' => $fullName !== '' ? $fullName : $email]);
-    $footer = $plainPassword !== '' ? t('mail.user_created_password_note') : '';
+        $heading = t('mail.user_created_subject');
+        $intro = t('mail.user_created_intro', ['name' => $fullName !== '' ? $fullName : $email]);
+        $footer = $plainPassword !== '' ? t('mail.user_created_password_note') : '';
 
-    $result = brevoSendEmail(
-        [['email' => $email, 'name' => $fullName]],
-        $heading,
-        mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_sign_in'), $loginUrl, $footer),
-        mailRenderText($heading, $intro, $rows, $loginUrl, $footer)
-    );
+        $result = brevoSendEmail(
+            [['email' => $email, 'name' => $fullName]],
+            $heading,
+            mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_sign_in'), $loginUrl, $footer),
+            mailRenderText($heading, $intro, $rows, $loginUrl, $footer)
+        );
 
-    return $result['ok'];
+        return $result['ok'];
+    };
+
+    return $companyLocale !== null ? withLocale($companyLocale, $render) : $render();
 }
 
 /**
@@ -476,52 +480,56 @@ function sendCompanyCreatedEmail(array $company, array $recipients, string $crea
  *
  * $changeType is one of: assigned, moved, removed.
  */
-function sendShiftChangeEmail(array $user, array $details, string $changeType): bool
+function sendShiftChangeEmail(array $user, array $details, string $changeType, ?string $companyLocale = null): bool
 {
     if (!mailNotificationEnabled('shift_change')) {
         return false;
     }
 
-    $email = trim((string) ($user['email'] ?? ''));
-    $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+    $render = function () use ($user, $details, $changeType): bool {
+        $email = trim((string) ($user['email'] ?? ''));
+        $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
 
-    $subjectKey = match ($changeType) {
-        'moved' => 'mail.shift_moved_subject',
-        'removed' => 'mail.shift_removed_subject',
-        default => 'mail.shift_assigned_subject',
+        $subjectKey = match ($changeType) {
+            'moved' => 'mail.shift_moved_subject',
+            'removed' => 'mail.shift_removed_subject',
+            default => 'mail.shift_assigned_subject',
+        };
+        $introKey = match ($changeType) {
+            'moved' => 'mail.shift_moved_intro',
+            'removed' => 'mail.shift_removed_intro',
+            default => 'mail.shift_assigned_intro',
+        };
+
+        $rows = [t('mail.field_date') => mailFormatDate($details['work_date'] ?? null)];
+        if (!empty($details['shift_name'])) {
+            $rows[t('mail.field_shift')] = (string) $details['shift_name'];
+        }
+        if (!empty($details['start_time']) || !empty($details['end_time'])) {
+            $rows[t('mail.field_hours')] = trim((string) ($details['start_time'] ?? '') . ' - ' . (string) ($details['end_time'] ?? ''), ' -');
+        }
+        if (!empty($details['department_name'])) {
+            $rows[t('mail.field_department')] = (string) $details['department_name'];
+        }
+        if (!empty($details['previous_work_date']) && $changeType === 'moved') {
+            $rows[t('mail.field_previous_date')] = mailFormatDate($details['previous_work_date']);
+        }
+
+        $heading = t($subjectKey);
+        $intro = t($introKey, ['name' => $fullName !== '' ? $fullName : $email]);
+        $spaceUrl = mailAppUrl('my-space');
+
+        $result = brevoSendEmail(
+            [['email' => $email, 'name' => $fullName]],
+            $heading . ' - ' . mailFormatDate($details['work_date'] ?? null),
+            mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_open_my_space'), $spaceUrl),
+            mailRenderText($heading, $intro, $rows, $spaceUrl)
+        );
+
+        return $result['ok'];
     };
-    $introKey = match ($changeType) {
-        'moved' => 'mail.shift_moved_intro',
-        'removed' => 'mail.shift_removed_intro',
-        default => 'mail.shift_assigned_intro',
-    };
 
-    $rows = [t('mail.field_date') => mailFormatDate($details['work_date'] ?? null)];
-    if (!empty($details['shift_name'])) {
-        $rows[t('mail.field_shift')] = (string) $details['shift_name'];
-    }
-    if (!empty($details['start_time']) || !empty($details['end_time'])) {
-        $rows[t('mail.field_hours')] = trim((string) ($details['start_time'] ?? '') . ' - ' . (string) ($details['end_time'] ?? ''), ' -');
-    }
-    if (!empty($details['department_name'])) {
-        $rows[t('mail.field_department')] = (string) $details['department_name'];
-    }
-    if (!empty($details['previous_work_date']) && $changeType === 'moved') {
-        $rows[t('mail.field_previous_date')] = mailFormatDate($details['previous_work_date']);
-    }
-
-    $heading = t($subjectKey);
-    $intro = t($introKey, ['name' => $fullName !== '' ? $fullName : $email]);
-    $spaceUrl = mailAppUrl('my-space');
-
-    $result = brevoSendEmail(
-        [['email' => $email, 'name' => $fullName]],
-        $heading . ' - ' . mailFormatDate($details['work_date'] ?? null),
-        mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_open_my_space'), $spaceUrl),
-        mailRenderText($heading, $intro, $rows, $spaceUrl)
-    );
-
-    return $result['ok'];
+    return $companyLocale !== null ? withLocale($companyLocale, $render) : $render();
 }
 
 /**
@@ -572,7 +580,18 @@ function notifyShiftChange(PDO $pdo, int $userId, array $details, string $change
             return;
         }
 
-        sendShiftChangeEmail($employee, $details, $changeType);
+        $localeStatement = $pdo->prepare(
+            'SELECT c.default_locale
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             LEFT JOIN companies c ON c.id = d.company_id
+             WHERE u.id = :id
+             LIMIT 1'
+        );
+        $localeStatement->execute(['id' => $userId]);
+        $companyLocale = companyLocale(['default_locale' => $localeStatement->fetchColumn() ?: null]);
+
+        sendShiftChangeEmail($employee, $details, $changeType, $companyLocale);
     } catch (Throwable $e) {
         mailLog('shift_change notification failed: ' . $e->getMessage());
     }
@@ -677,24 +696,26 @@ function sendCompanyApprovedEmail(array $requester, array $company, ?string $tri
         return false;
     }
 
-    $fullName = trim(($requester['first_name'] ?? '') . ' ' . ($requester['last_name'] ?? ''));
-    $heading = t('mail.approved_subject');
-    $intro = t('mail.approved_intro', ['name' => $fullName, 'company' => (string) ($company['name'] ?? '')]);
-    $rows = [
-        t('mail.field_company') => (string) ($company['name'] ?? ''),
-        t('mail.field_trial_days') => (string) trialPeriodDays(),
-        t('mail.field_trial_ends') => mailFormatDate($trialEndsAt),
-    ];
-    $loginUrl = mailAppUrl('login');
+    return withLocale(companyLocale($company), function () use ($requester, $company, $trialEndsAt): bool {
+        $fullName = trim(($requester['first_name'] ?? '') . ' ' . ($requester['last_name'] ?? ''));
+        $heading = t('mail.approved_subject');
+        $intro = t('mail.approved_intro', ['name' => $fullName, 'company' => (string) ($company['name'] ?? '')]);
+        $rows = [
+            t('mail.field_company') => (string) ($company['name'] ?? ''),
+            t('mail.field_trial_days') => (string) trialPeriodDays(),
+            t('mail.field_trial_ends') => mailFormatDate($trialEndsAt),
+        ];
+        $loginUrl = mailAppUrl('login');
 
-    $result = brevoSendEmail(
-        [['email' => (string) ($requester['email'] ?? ''), 'name' => $fullName]],
-        $heading,
-        mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_sign_in'), $loginUrl, t('mail.approved_note')),
-        mailRenderText($heading, $intro, $rows, $loginUrl, t('mail.approved_note'))
-    );
+        $result = brevoSendEmail(
+            [['email' => (string) ($requester['email'] ?? ''), 'name' => $fullName]],
+            $heading,
+            mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', $rows, t('mail.cta_sign_in'), $loginUrl, t('mail.approved_note')),
+            mailRenderText($heading, $intro, $rows, $loginUrl, t('mail.approved_note'))
+        );
 
-    return $result['ok'];
+        return $result['ok'];
+    });
 }
 
 /**
@@ -706,18 +727,20 @@ function sendCompanyRejectedEmail(array $requester, array $company): bool
         return false;
     }
 
-    $fullName = trim(($requester['first_name'] ?? '') . ' ' . ($requester['last_name'] ?? ''));
-    $heading = t('mail.rejected_subject');
-    $intro = t('mail.rejected_intro', ['name' => $fullName, 'company' => (string) ($company['name'] ?? '')]);
+    return withLocale(companyLocale($company), function () use ($requester, $company): bool {
+        $fullName = trim(($requester['first_name'] ?? '') . ' ' . ($requester['last_name'] ?? ''));
+        $heading = t('mail.rejected_subject');
+        $intro = t('mail.rejected_intro', ['name' => $fullName, 'company' => (string) ($company['name'] ?? '')]);
 
-    $result = brevoSendEmail(
-        [['email' => (string) ($requester['email'] ?? ''), 'name' => $fullName]],
-        $heading,
-        mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', [], null, null, t('mail.rejected_note')),
-        mailRenderText($heading, $intro, [], null, t('mail.rejected_note'))
-    );
+        $result = brevoSendEmail(
+            [['email' => (string) ($requester['email'] ?? ''), 'name' => $fullName]],
+            $heading,
+            mailRenderLayout($heading, '<p style="margin:0;">' . htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '</p>', [], null, null, t('mail.rejected_note')),
+            mailRenderText($heading, $intro, [], null, t('mail.rejected_note'))
+        );
 
-    return $result['ok'];
+        return $result['ok'];
+    });
 }
 
 /**
@@ -757,49 +780,53 @@ function companyNoticeTemplate(string $template, string $companyName): array
  */
 function sendCompanyNotice(PDO $pdo, array $owner, array $company, string $template): array
 {
-    $companyName = (string) ($company['name'] ?? '');
-    $parts = companyNoticeTemplate($template, $companyName);
-    $fullName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
-    $sent = ['email' => false, 'in_app' => false];
+    // Rendered in the company's own language, not the super admin's session
+    // language: the recipient is the company owner, not the sender.
+    return withLocale(companyLocale($company), function () use ($pdo, $owner, $company, $template): array {
+        $companyName = (string) ($company['name'] ?? '');
+        $parts = companyNoticeTemplate($template, $companyName);
+        $fullName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+        $sent = ['email' => false, 'in_app' => false];
 
-    // In-app first: it does not depend on an external service being reachable.
-    try {
-        $pdo->prepare(
-            "INSERT INTO requests (user_id, type, title, message, status)
-             VALUES (:user_id, 'notification', :title, :message, 'pending')"
-        )->execute([
-            'user_id' => (int) ($owner['id'] ?? 0),
-            'title' => $parts['subject'],
-            'message' => $parts['body'],
-        ]);
-        $sent['in_app'] = true;
-    } catch (Throwable $e) {
-        mailLog('company notice in-app failed: ' . $e->getMessage());
-    }
-
-    if (mailNotificationEnabled('company_notice')) {
-        $rows = [];
-        if ($companyName !== '') {
-            $rows[t('mail.field_company')] = $companyName;
-        }
-        if (!empty($company['trial_ends_at'])) {
-            $rows[t('mail.field_trial_ends')] = mailFormatDate((string) $company['trial_ends_at']);
+        // In-app first: it does not depend on an external service being reachable.
+        try {
+            $pdo->prepare(
+                "INSERT INTO requests (user_id, type, title, message, status)
+                 VALUES (:user_id, 'notification', :title, :message, 'pending')"
+            )->execute([
+                'user_id' => (int) ($owner['id'] ?? 0),
+                'title' => $parts['subject'],
+                'message' => $parts['body'],
+            ]);
+            $sent['in_app'] = true;
+        } catch (Throwable $e) {
+            mailLog('company notice in-app failed: ' . $e->getMessage());
         }
 
-        $result = brevoSendEmail(
-            [['email' => (string) ($owner['email'] ?? ''), 'name' => $fullName]],
-            $parts['subject'],
-            mailRenderLayout(
+        if (mailNotificationEnabled('company_notice')) {
+            $rows = [];
+            if ($companyName !== '') {
+                $rows[t('mail.field_company')] = $companyName;
+            }
+            if (!empty($company['trial_ends_at'])) {
+                $rows[t('mail.field_trial_ends')] = mailFormatDate((string) $company['trial_ends_at']);
+            }
+
+            $result = brevoSendEmail(
+                [['email' => (string) ($owner['email'] ?? ''), 'name' => $fullName]],
                 $parts['subject'],
-                '<p style="margin:0;">' . nl2br(htmlspecialchars($parts['body'], ENT_QUOTES, 'UTF-8')) . '</p>',
-                $rows,
-                t('mail.cta_sign_in'),
-                mailAppUrl('login')
-            ),
-            mailRenderText($parts['subject'], $parts['body'], $rows, mailAppUrl('login'))
-        );
-        $sent['email'] = $result['ok'];
-    }
+                mailRenderLayout(
+                    $parts['subject'],
+                    '<p style="margin:0;">' . nl2br(htmlspecialchars($parts['body'], ENT_QUOTES, 'UTF-8')) . '</p>',
+                    $rows,
+                    t('mail.cta_sign_in'),
+                    mailAppUrl('login')
+                ),
+                mailRenderText($parts['subject'], $parts['body'], $rows, mailAppUrl('login'))
+            );
+            $sent['email'] = $result['ok'];
+        }
 
-    return $sent;
+        return $sent;
+    });
 }

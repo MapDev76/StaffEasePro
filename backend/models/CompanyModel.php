@@ -116,6 +116,10 @@ class CompanyModel
             $columns[] = 'is_active';
         }
 
+        if ($this->hasCompanyColumn('default_locale')) {
+            $columns[] = 'default_locale';
+        }
+
         $placeholders = array_map(static fn (string $column): string => ':' . $column, $columns);
         $statement = $this->pdo->prepare(
             'INSERT INTO companies (' . implode(', ', $columns) . ')
@@ -157,6 +161,10 @@ class CompanyModel
 
         if ($this->hasCompanyColumn('is_active')) {
             $fields[] = 'is_active';
+        }
+
+        if ($this->hasCompanyColumn('default_locale')) {
+            $fields[] = 'default_locale';
         }
 
         $assignments = array_map(static fn (string $column): string => $column . ' = :' . $column, $fields);

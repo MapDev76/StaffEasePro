@@ -22,6 +22,7 @@ if (!$isSuperAdmin && !$isAdmin) {
 }
 
 $pdo = getPDO();
+ensureCompanyApprovalSchema($pdo);
 
 try {
     $logoColStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'logo_path'");
@@ -46,6 +47,12 @@ try {
 }
 
 $companyModel = new CompanyModel($pdo);
+
+$resolveDefaultLocaleInput = static function (array $input): ?string {
+    $locale = strtolower(trim((string) ($input['default_locale'] ?? '')));
+
+    return in_array($locale, appSupportedLocales(), true) ? $locale : null;
+};
 
 $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
@@ -166,6 +173,7 @@ try {
                 'email' => $input['email'] ?? null,
                 'logo_path' => $uploadedLogoPath ?? ($logoPathInput !== '' ? $logoPathInput : null),
                 'signature_ip' => $input['signature_ip'] ?? null,
+                'default_locale' => $resolveDefaultLocaleInput($input),
             ];
 
             $id = $companyModel->create($data);
@@ -221,6 +229,7 @@ try {
                 'email' => $input['email'] ?? null,
                 'logo_path' => $uploadedLogoPath ?? ($logoPathInput !== '' ? $logoPathInput : null),
                 'signature_ip' => $input['signature_ip'] ?? null,
+                'default_locale' => $resolveDefaultLocaleInput($input),
             ];
 
             $companyModel->update($id, $data);

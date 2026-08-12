@@ -813,6 +813,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <div class="shift-wizard-step-body" data-cw-step-body hidden>
                                 <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value=""></label>
                                 <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
+                                <label class="settings-field"><?php echo e(t('settings.company_default_locale')); ?>
+                                    <select data-field="default_locale">
+                                        <option value=""><?php echo e(t('settings.company_default_locale_auto')); ?></option>
+                                        <option value="it">Italiano</option>
+                                        <option value="fr">Français</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </label>
                                 <div class="shift-wizard-step-actions">
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-cw-back="2">Indietro</button>
                                     <button type="button" class="admin-action-link" data-cw-next="4">Avanti</button>
@@ -900,6 +908,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value="<?php echo e($company['zip_code'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value="<?php echo e($company['phone'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value="<?php echo e($company['email'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('settings.company_default_locale')); ?>
+                                            <?php $companyLocaleValue = (string) ($company['default_locale'] ?? ''); ?>
+                                            <select data-field="default_locale">
+                                                <option value="" <?php echo $companyLocaleValue === '' ? 'selected' : ''; ?>><?php echo e(t('settings.company_default_locale_auto')); ?></option>
+                                                <option value="it" <?php echo $companyLocaleValue === 'it' ? 'selected' : ''; ?>>Italiano</option>
+                                                <option value="fr" <?php echo $companyLocaleValue === 'fr' ? 'selected' : ''; ?>>Français</option>
+                                                <option value="en" <?php echo $companyLocaleValue === 'en' ? 'selected' : ''; ?>>English</option>
+                                            </select>
+                                        </label>
                                         <label class="settings-field"><?php echo e(t('settings.logo_file')); ?><input data-field="logo_file" type="file" accept="image/*"></label>
                                         <label class="settings-field"><?php echo e(t('settings.logo_path_optional')); ?><input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('settings.authorized_wifi_ip')); ?><input data-field="signature_ip" type="text" value="<?php echo e($company['signature_ip'] ?? ''); ?>"></label>

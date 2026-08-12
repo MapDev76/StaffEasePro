@@ -22,6 +22,7 @@ if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
 
 $pdo = getPDO();
 ensureSchedulerSchema($pdo);
+ensureCompanyApprovalSchema($pdo);
 $userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
 
@@ -174,12 +175,15 @@ try {
             // Welcome email. The plain password only exists here, before hashing.
             try {
                 $newUserCompanyName = '';
+                $newUserCompanyLocale = null;
                 if ((int) $assignedCompanyId > 0) {
-                    $companyLookup = $pdo->prepare('SELECT name FROM companies WHERE id = :id LIMIT 1');
+                    $companyLookup = $pdo->prepare('SELECT name, default_locale FROM companies WHERE id = :id LIMIT 1');
                     $companyLookup->execute(['id' => (int) $assignedCompanyId]);
-                    $newUserCompanyName = (string) ($companyLookup->fetchColumn() ?: '');
+                    $companyLookupRow = $companyLookup->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $newUserCompanyName = (string) ($companyLookupRow['name'] ?? '');
+                    $newUserCompanyLocale = companyLocale($companyLookupRow);
                 }
-                sendUserCreatedEmail($user ?? $data, $requestedPassword, $newUserCompanyName);
+                sendUserCreatedEmail($user ?? $data, $requestedPassword, $newUserCompanyName, $newUserCompanyLocale);
             } catch (Throwable $mailError) {
                 mailLog('user_created notification failed: ' . $mailError->getMessage());
             }

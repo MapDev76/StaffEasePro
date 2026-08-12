@@ -26,6 +26,7 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'view');
 $pdo = getPDO();
 ensureSchedulerSchema($pdo);
 ensureDocumentStorageSchema($pdo);
+ensureCompanyApprovalSchema($pdo);
 $userModel = new UserModel($pdo);
 $companyModel = new CompanyModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
