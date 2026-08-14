@@ -6,6 +6,7 @@ config/mail.php
 config/mail.production.php
 config/claude.php
 config/claude.production.php
+config/sync_api.php
 storage/logs/
 config/database.php
 config/databse.production.php

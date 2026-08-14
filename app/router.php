@@ -25,6 +25,7 @@ $routes = [
     'api-commercial' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-assistant' => realpath(__DIR__ . '/../backend/controllers/ApiDispatcher.php'),
     'api-notifications' => realpath(__DIR__ . '/../backend/controllers/ApiNotificationsController.php'),
+    'api-sync' => realpath(__DIR__ . '/../backend/controllers/SyncApiController.php'), // read-only export for sister apps (e.g. HotelEase Pro)
     'document-download' => realpath(__DIR__ . '/../backend/controllers/DocumentDownloadController.php'),
     'my-space' => realpath(__DIR__ . '/../backend/controllers/EmployeeSpaceController.php'),
     'users' => realpath(__DIR__ . '/../backend/controllers/UsersController.php'),
