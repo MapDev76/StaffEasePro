@@ -84,6 +84,7 @@ $companySignatureIpSelect = $hasCompanySignatureIpColumn ? 'c.signature_ip' : 'N
 
 $signaturePolicyStatement = $pdo->prepare(
     'SELECT ' . $companySignatureIpSelect . ',
+            u.department_id,
             c.id AS company_id,
             d.name AS department_name,
             c.name AS company_name
